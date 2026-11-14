@@ -22,6 +22,11 @@ const (
 
 func statFile(p string) (os.FileInfo, error) { return os.Stat(p) }
 
+var (
+	audioExts = []string{"mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma"}
+	videoExts = []string{"mp4", "mkv", "webm", "mov", "avi", "flv", "m4v", "ts", "wmv", "mpg", "mpeg", "3gp"}
+)
+
 // Tools says which external programs are available.
 type Tools struct {
 	FFmpeg bool `json:"ffmpeg"`
@@ -81,7 +86,7 @@ func (r *Rokit) PickFile() (string, error) {
 	sel, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
 		Title: "Pilih file audio",
 		Filters: []mygo.FileFilter{
-			{Name: "Audio/video", Extensions: []string{"mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma", "mp4", "mkv", "webm"}},
+			{Name: "Audio/video", Extensions: append(append([]string{}, audioExts...), videoExts...)},
 			{Name: "Semua file", Extensions: []string{"*"}},
 		},
 	})
@@ -127,6 +132,15 @@ func downloadsDir() string {
 
 // Download fetches the best audio of url with yt-dlp into a temp dir.
 func (r *Rokit) Download(ctx context.Context, url string) (Downloaded, error) {
+	return r.fetch(ctx, url, "bestaudio/best")
+}
+
+// DownloadVideoFile fetches a video (up to 1080p) as a temp file, as input for frame extraction.
+func (r *Rokit) DownloadVideoFile(ctx context.Context, url string) (Downloaded, error) {
+	return r.fetch(ctx, url, "bv*[height<=1080]+ba/b[height<=1080]")
+}
+
+func (r *Rokit) fetch(ctx context.Context, url, format string) (Downloaded, error) {
 	url = strings.TrimSpace(url)
 	if !ValidURL(url) {
 		return Downloaded{}, errors.New("URL harus diawali http:// atau https://")
@@ -135,7 +149,7 @@ func (r *Rokit) Download(ctx context.Context, url string) (Downloaded, error) {
 	if err != nil {
 		return Downloaded{}, err
 	}
-	args := []string{"-f", "bestaudio/best", "--no-playlist", "--no-simulate", "--windows-filenames",
+	args := []string{"-f", format, "--no-playlist", "--no-simulate", "--windows-filenames",
 		"-o", filepath.ToSlash(dir) + "/%(title).80s.%(ext)s", "--print", "after_move:filepath", "--", url}
 	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
 	hideWindow(cmd)
@@ -197,6 +211,10 @@ func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts) error
 	}
 	cctx, cancel := context.WithTimeout(ctx, 2*time.Hour)
 	defer cancel()
+	// A video without an audio track would only fail cryptically in ffmpeg.
+	if info, err := probeFile(cctx, input); err == nil && !info.HasAudio {
+		return errors.New(noAudioMsg)
+	}
 	cmd := exec.CommandContext(cctx, "ffmpeg", BuildArgs(input, output, o)...)
 	hideWindow(cmd)
 	var stderr bytes.Buffer
@@ -204,6 +222,9 @@ func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts) error
 	if err := cmd.Run(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return errors.New(ffmpegMsg)
+		}
+		if NoAudioStderr(stderr.String()) {
+			return errors.New(noAudioMsg)
 		}
 		if msg := strings.TrimSpace(stderr.String()); msg != "" {
 			return errors.New(msg)
