@@ -171,6 +171,10 @@ fn apply_style(ctx: &egui::Context) {
         w.bg_stroke = Stroke::new(1.0_f32, BORDER);
         w.fg_stroke = Stroke::new(1.0_f32, TEXT);
     }
+    // bg_fill is the slider rail; buttons use weak_bg_fill.
+    v.widgets.inactive.bg_fill = BORDER;
+    v.widgets.hovered.bg_fill = BORDER;
+    v.widgets.active.bg_fill = BORDER;
     v.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, ACCENT);
     v.widgets.active.bg_stroke = Stroke::new(1.5_f32, ACCENT);
     ctx.set_style(s);
@@ -308,6 +312,45 @@ impl eframe::App for App {
         }
         // Single centered column, max 560px wide.
         let pad = ((ctx.screen_rect().width() - 560.0) / 2.0).max(20.0);
+        egui::TopBottomPanel::bottom("go")
+            .frame(egui::Frame::none().fill(BG).inner_margin(Margin { left: pad, right: pad, top: 8.0, bottom: 16.0 }))
+            .show(ctx, |ui| {
+                ui.spacing_mut().item_spacing.y = 10.0;
+                    let go = ui
+                        .add_enabled_ui(self.input.is_some() && !self.busy, |ui| {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
+                            let fill = if !ui.is_enabled() {
+                                ACCENT.gamma_multiply(0.4)
+                            } else if resp.hovered() {
+                                ACCENT_HOVER
+                            } else {
+                                ACCENT
+                            };
+                            ui.painter().rect_filled(rect, Rounding::same(10.0), fill);
+                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "Convert", FontId::proportional(16.0), Color32::WHITE);
+                            resp.clicked()
+                        })
+                        .inner;
+                    if go {
+                        self.convert(ctx);
+                    }
+                    ui.horizontal(|ui| {
+                        let color = if self.status.starts_with("Done") {
+                            OK
+                        } else if self.status == "Failed." {
+                            ERROR
+                        } else {
+                            MUTED
+                        };
+                        ui.label(RichText::new(&self.status).color(color));
+                        if self.busy {
+                            ui.spinner();
+                        }
+                    });
+                    if !self.error.is_empty() {
+                        ui.label(RichText::new(&self.error).color(ERROR));
+                    }
+            });
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(BG).inner_margin(Margin { left: pad, right: pad, top: 24.0, bottom: 24.0 }))
             .show(ctx, |ui| {
@@ -394,40 +437,6 @@ impl eframe::App for App {
                             });
                         });
                     });
-                    let go = ui
-                        .add_enabled_ui(self.input.is_some() && !self.busy, |ui| {
-                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
-                            let fill = if !ui.is_enabled() {
-                                ACCENT.gamma_multiply(0.4)
-                            } else if resp.hovered() {
-                                ACCENT_HOVER
-                            } else {
-                                ACCENT
-                            };
-                            ui.painter().rect_filled(rect, Rounding::same(10.0), fill);
-                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "Convert", FontId::proportional(16.0), Color32::WHITE);
-                            resp.clicked()
-                        })
-                        .inner;
-                    if go {
-                        self.convert(ctx);
-                    }
-                    ui.horizontal(|ui| {
-                        let color = if self.status.starts_with("Done") {
-                            OK
-                        } else if self.status == "Failed." {
-                            ERROR
-                        } else {
-                            MUTED
-                        };
-                        ui.label(RichText::new(&self.status).color(color));
-                        if self.busy {
-                            ui.spinner();
-                        }
-                    });
-                    if !self.error.is_empty() {
-                        ui.label(RichText::new(&self.error).color(ERROR));
-                    }
                 });
             });
     }
