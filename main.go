@@ -12,11 +12,13 @@ func main() {
 	mygo.App.WhenReady(func() {
 		mygo.NewWindow(mygo.WindowOptions{
 			Title:           "Rokit Audio Editor",
-			Width:           720,
-			Height:          880,
-			MinWidth:        480,
-			MinHeight:       560,
-			BackgroundColor: "#F4F6F8", // --bg in src/style.css
+			Width:           1100,
+			Height:          720,
+			MinWidth:        900,
+			MinHeight:       600,
+			TitleBarStyle:   mygo.TitleBarHidden, // the page draws its own title area, like the canvas design
+			TitleBarHeight:  40,
+			BackgroundColor: "#F5F5F7", // --bg in src/style.css
 			StateKey:        "main",
 			URL:             "/",
 		})

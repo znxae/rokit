@@ -7,88 +7,111 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Rokit Audio Editor</h1>
-        <p class="muted">Konversi, ubah kecepatan, dan perkeras audio dengan ffmpeg</p>
-      </header>
+    <div id="win">
+      <aside id="sidebar">
+        <div class="side-top"></div>
+        <div class="side-h">Alat</div>
+        <nav id="nav" aria-label="Alat">
+          <button class="side-row sel" id="nav-audio" data-tab="audio" type="button" aria-current="page">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+            <span>Audio</span>
+          </button>
+        </nav>
+        <div id="side-foot">Memeriksa ffmpeg dan yt-dlp…</div>
+      </aside>
 
-      <div id="tools" class="banner" hidden></div>
+      <section id="content">
+        <div class="titlebar"></div>
 
-      <section class="card">
-        <h2>File input</h2>
-        <button id="pick" class="drop" type="button">
-          <span id="pick-title">Pilih file audio</span>
-          <span id="pick-sub" class="muted" hidden>Klik untuk mengganti file</span>
-        </button>
-        <form id="url-form" class="row">
-          <input id="url" type="url" placeholder="atau tempel URL (YouTube, TikTok, …)" autocomplete="off" spellcheck="false" />
-          <button id="fetch" type="submit" class="btn" disabled>Ambil</button>
-        </form>
-        <p id="url-err" class="small err" hidden>URL harus diawali http:// atau https://</p>
-      </section>
+        <!-- ================= Audio ================= -->
+        <div class="tab active" id="tab-audio">
+          <div class="scroll">
+            <h1>Audio</h1>
+            <div class="banner" id="tools" hidden></div>
 
-      <section class="card">
-        <h2>Format &amp; bitrate</h2>
-        <div class="two">
-          <label>Format
-            <select id="format">
-              <option>mp3</option><option>wav</option><option>flac</option>
-              <option>ogg</option><option>m4a</option><option>opus</option>
-            </select>
-          </label>
-          <label>Bitrate
-            <select id="bitrate">
-              <option value="64">64 kbps</option><option value="96">96 kbps</option>
-              <option value="128">128 kbps</option><option value="160">160 kbps</option>
-              <option value="192" selected>192 kbps</option><option value="256">256 kbps</option>
-              <option value="320">320 kbps</option>
-            </select>
-          </label>
+            <section>
+              <div class="glabel">Input</div>
+              <button class="drop" id="pick" type="button">
+                <strong><span id="pick-title">Pilih file audio atau video</span></strong>
+                <span class="sub" id="pick-sub">MP3, WAV, FLAC, MP4, MKV, …</span>
+              </button>
+              <form class="group mt" id="url-form">
+                <div class="row">
+                  <input class="field" id="url" type="url" placeholder="atau tempel URL (YouTube, TikTok, …)" aria-label="URL" autocomplete="off" spellcheck="false" />
+                  <button class="btn" id="fetch" type="submit" disabled>Ambil</button>
+                </div>
+              </form>
+              <p class="sub" id="url-err" hidden style="margin:8px 0 0 16px;color:var(--err)">URL harus diawali http:// atau https://</p>
+            </section>
+
+            <div class="cols">
+              <section>
+                <div class="glabel">Format</div>
+                <div class="group">
+                  <div class="row">
+                    <label class="l" for="format">Format</label>
+                    <select class="popup" id="format">
+                      <option value="mp3">MP3</option><option value="wav">WAV</option><option value="flac">FLAC</option>
+                      <option value="ogg">OGG</option><option value="m4a">M4A</option><option value="opus">Opus</option>
+                    </select>
+                  </div>
+                  <div class="row" id="row-bitrate">
+                    <label class="l" for="bitrate">Bitrate<small>Nonaktif untuk WAV dan FLAC</small></label>
+                    <select class="popup" id="bitrate">
+                      <option value="64">64 kbps</option><option value="96">96 kbps</option><option value="128">128 kbps</option>
+                      <option value="160">160 kbps</option><option value="192" selected>192 kbps</option>
+                      <option value="256">256 kbps</option><option value="320">320 kbps</option>
+                    </select>
+                  </div>
+                  <div class="row">
+                    <span class="l">Channel</span>
+                    <div class="seg" id="channels" role="radiogroup" aria-label="Channel">
+                      <button type="button" class="on" data-v="keep">Asli</button>
+                      <button type="button" data-v="mono">Mono</button>
+                      <button type="button" data-v="stereo">Stereo</button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <div class="glabel">Penyesuaian</div>
+                <div class="group">
+                  <div class="row stack">
+                    <div class="top"><label for="speed">Kecepatan</label><span class="val" id="speed-val">1.00×</span></div>
+                    <input type="range" id="speed" min="0.25" max="4" step="0.05" value="1" />
+                    <span class="sub" id="speed-hint">Speed normal (1×)</span>
+                  </div>
+                  <div class="row stack">
+                    <div class="top"><label for="gain">Perkeras suara</label><span class="val" id="gain-val">0.0 dB</span></div>
+                    <input type="range" id="gain" min="-20" max="20" step="0.5" value="0" />
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <section>
+              <div class="glabel">Output</div>
+              <div class="group">
+                <div class="row">
+                  <span class="l">Simpan sebagai</span>
+                  <span class="path" id="out-path">—</span>
+                  <button class="btn" id="save" type="button" disabled>Ubah…</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <footer class="foot">
+            <div class="msg">
+              <div class="status" id="status" role="status">Pilih file input atau tempel URL.</div>
+              <pre class="err" id="error" hidden></pre>
+            </div>
+            <div class="actions"><button class="btn primary" id="convert" type="button" disabled>Convert</button></div>
+          </footer>
         </div>
       </section>
-
-      <section class="card">
-        <h2>Kecepatan</h2>
-        <div class="slider">
-          <input id="speed" type="range" min="0.25" max="4" step="0.05" value="1" />
-          <span id="speed-chip" class="chip">1.00×</span>
-        </div>
-        <p id="speed-hint" class="small muted">Speed normal (1x)</p>
-      </section>
-
-      <section class="card">
-        <h2>Perkeras suara</h2>
-        <div class="slider">
-          <input id="gain" type="range" min="-20" max="20" step="0.5" value="0" />
-          <span id="gain-chip" class="chip">+0.0 dB</span>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Channel</h2>
-        <div class="seg" role="radiogroup" aria-label="Channel">
-          <label><input type="radio" name="ch" value="keep" checked /><span>Asli</span></label>
-          <label><input type="radio" name="ch" value="mono" /><span>Mono</span></label>
-          <label><input type="radio" name="ch" value="stereo" /><span>Stereo</span></label>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>File output</h2>
-        <div class="row out">
-          <button id="save" type="button" class="btn" disabled>Simpan sebagai…</button>
-          <span id="out-path" class="small muted path">—</span>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <button id="convert" type="button" class="primary" disabled>Convert</button>
-      <p id="status" class="status" role="status">Pilih file input atau tempel URL.</p>
-      <pre id="error" class="err" hidden></pre>
-    </footer>
-
+    </div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
