@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rokit Audio Editor</title>
+    <link rel="stylesheet" href="./src/themes.css" />
     <link rel="stylesheet" href="./src/style.css" />
+    <script>
+      /* First paint: apply the cached theme before the page shows (main.ts then confirms it with the Go settings file). */
+      (function () {
+        var t = "auto";
+        try { t = localStorage.getItem("rokit.theme") || "auto"; } catch (e) {}
+        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (["auto", "apple", "dark", "material", "material-dark", "oled"].indexOf(t) < 0) t = "auto";
+        document.documentElement.dataset.theme = t === "auto" ? (dark ? "dark" : "apple") : t;
+      })();
+    </script>
   </head>
   <body>
     <div id="win">
@@ -17,7 +28,18 @@
             <span>Audio</span>
           </button>
         </nav>
-        <div id="side-foot">Memeriksa ffmpeg dan yt-dlp…</div>
+        <div class="side-bottom">
+          <label for="theme">Tema</label>
+          <select class="popup" id="theme">
+            <option value="auto">Otomatis (ikuti sistem)</option>
+            <option value="apple">Apple Terang</option>
+            <option value="dark">Gelap</option>
+            <option value="material">Material Terang</option>
+            <option value="material-dark">Material Gelap</option>
+            <option value="oled">OLED</option>
+          </select>
+          <div id="side-foot">Memeriksa ffmpeg dan yt-dlp…</div>
+        </div>
       </aside>
 
       <section id="content">

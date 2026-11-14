@@ -171,6 +171,10 @@ export const Rokit = {
   probeVideo(path: string): Promise<VideoInfo> {
     return call("Rokit.ProbeVideo", path);
   },
+  /** SetTheme saves the theme; unknown names are rejected. */
+  setTheme(name: string): Promise<void> {
+    return call("Rokit.SetTheme", name);
+  },
   /** SuggestFramesDir is Downloads/<video name>, made unique so nothing is overwritten. */
   suggestFramesDir(input: string): Promise<string> {
     return call("Rokit.SuggestFramesDir", input);
@@ -181,5 +185,9 @@ export const Rokit = {
    */
   suggestOutput(input: string, format: string): Promise<string> {
     return call("Rokit.SuggestOutput", input, format);
+  },
+  /** Theme returns the saved theme name ("auto" by default). */
+  theme(): Promise<string> {
+    return call("Rokit.Theme");
   },
 } as const;

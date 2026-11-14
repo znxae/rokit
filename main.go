@@ -18,7 +18,7 @@ func main() {
 			MinHeight:       600,
 			TitleBarStyle:   mygo.TitleBarHidden, // the page draws its own title area, like the canvas design
 			TitleBarHeight:  40,
-			BackgroundColor: "#F5F5F7", // --bg in src/style.css
+			BackgroundColor: themeBackground[loadSettings().Theme], // no light flash before a dark theme paints
 			StateKey:        "main",
 			URL:             "/",
 		})

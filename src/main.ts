@@ -1,6 +1,7 @@
 // Types and the Rokit service are generated from the Go code by `mygo generate`.
 import { Rokit } from "./mygo";
 import { initAudio } from "./audio";
+import { initTheme } from "./theme";
 import { $ } from "./ui";
 
 /** Sidebar rows switch tabs; a row whose panel does not exist yet is ignored. */
@@ -31,5 +32,6 @@ async function checkTools() {
 }
 
 initTabs();
+void initTheme();
 initAudio();
 void checkTools();

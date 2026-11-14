@@ -1,0 +1,248 @@
+/*
+ * Theme tokens. Components in style.css use only these variables, never raw colors.
+ * Applied with <html data-theme="apple|dark|material|oled">. "Otomatis" in the picker resolves to
+ * apple (system light) or dark (system dark) in main.ts, so it never appears here.
+ * The canvas "Rokit UI" reads this same file for its theme designs.
+ */
+
+/* ---------- shared (shape + type defaults = Apple) ---------- */
+[data-theme] {
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --r-group: 12px;
+  --r-ctl: 8px;
+  --r-btn: 8px;
+  --r-seg: 8px;
+  --r-seg-btn: 6px;
+  --r-nav: 8px;
+  --r-drop: 12px;
+  --row-px: 16px;
+  --nav-h: 36px;
+  --title-size: 28px;
+  --title-weight: 700;
+  --glabel-case: uppercase;
+  --glabel-size: 12px;
+  --glabel-weight: 600;
+  --glabel-space: 0.04em;
+  --btn-weight: 600;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --seg-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --seg-border: transparent;
+}
+
+/* ---------- 1. Apple Terang (default) ---------- */
+[data-theme="apple"] {
+  color-scheme: light;
+  --bg: #f5f5f7;
+  --side: #ececee;
+  --side-border: #dcdce0;
+  --card: #ffffff;
+  --card-border: transparent;
+  --sep: #e5e5ea;
+  --text: #1d1d1f;
+  --sec: #6e6e73;
+  --sec-side: #5c5c61;
+  --accent: #007aff;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #0066cc;
+  --on-accent: #ffffff;
+  --accent-text: #0062cc;
+  --sel-bg: rgba(0, 122, 255, 0.14);
+  --sel-text: #004c99;
+  --hover: rgba(0, 0, 0, 0.05);
+  --btn-bg: rgba(118, 118, 128, 0.12);
+  --btn-hover: rgba(118, 118, 128, 0.2);
+  --btn-text: #0062cc;
+  --seg-track: rgba(118, 118, 128, 0.12);
+  --seg-on: #ffffff;
+  --seg-on-text: #1d1d1f;
+  --field-bg: #ffffff;
+  --field-border: #d1d1d6;
+  --drop-border: #c7c7cc;
+  --foot-bg: #fbfbfd;
+  --foot-border: #e5e5ea;
+  --ok: #1e7b34;
+  --err: #b42318;
+  --banner-bg: #fff1f0;
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236E6E73' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
+
+/* ---------- 2. Gelap (Apple dark) ---------- */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1c1e;
+  --side: #2c2c2e;
+  --side-border: #38383a;
+  --card: #2c2c2e;
+  --card-border: transparent;
+  --sep: #38383a;
+  --text: #f5f5f7;
+  --sec: #98989d;
+  --sec-side: #a1a1a6;
+  --accent: #0a84ff;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #1a85f0;
+  --on-accent: #ffffff;
+  --accent-text: #6cb2ff;
+  --sel-bg: rgba(10, 132, 255, 0.26);
+  --sel-text: #a9d1ff;
+  --hover: rgba(255, 255, 255, 0.07);
+  --btn-bg: rgba(118, 118, 128, 0.3);
+  --btn-hover: rgba(118, 118, 128, 0.42);
+  --btn-text: #6cb2ff;
+  --seg-track: rgba(118, 118, 128, 0.32);
+  --seg-on: #636366;
+  --seg-on-text: #ffffff;
+  --field-bg: #1c1c1e;
+  --field-border: #48484a;
+  --drop-border: #545458;
+  --foot-bg: #232325;
+  --foot-border: #38383a;
+  --ok: #30d158;
+  --err: #ff8a82;
+  --banner-bg: #3b1f1d;
+  --card-shadow: none;
+  --seg-shadow: none;
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2398989D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
+
+/* ---------- 4. OLED (true black, borders instead of shadows) ---------- */
+[data-theme="oled"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --side: #000000;
+  --side-border: #1f1f1f;
+  --card: #0a0a0a;
+  --card-border: #1f1f1f;
+  --sep: #1f1f1f;
+  --text: #ffffff;
+  --sec: #8e8e93;
+  --sec-side: #8e8e93;
+  --accent: #0a84ff;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #1a85f0;
+  --on-accent: #ffffff;
+  --accent-text: #6cb2ff;
+  --sel-bg: rgba(10, 132, 255, 0.24);
+  --sel-text: #a9d1ff;
+  --hover: rgba(255, 255, 255, 0.08);
+  --btn-bg: #1a1a1c;
+  --btn-hover: #262628;
+  --btn-text: #6cb2ff;
+  --seg-track: #1a1a1c;
+  --seg-on: #3a3a3c;
+  --seg-on-text: #ffffff;
+  --field-bg: #000000;
+  --field-border: #2c2c2e;
+  --drop-border: #3a3a3c;
+  --foot-bg: #000000;
+  --foot-border: #1f1f1f;
+  --ok: #30d158;
+  --err: #ff8a82;
+  --banner-bg: #1c0d0c;
+  --card-shadow: none;
+  --seg-shadow: none;
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
+
+/* ---------- 3. Material (M3, light variant, green-teal seed #006A60; no purple) ---------- */
+[data-theme="material"],
+[data-theme="material-dark"] {
+  --font: Roboto, "Segoe UI Variable", system-ui, sans-serif;
+  /* shapes: 28px containers, 16px controls, pill buttons and nav indicator */
+  --r-group: 28px;
+  --r-ctl: 16px;
+  --r-btn: 999px;
+  --r-seg: 999px;
+  --r-seg-btn: 999px;
+  --r-nav: 999px;
+  --r-drop: 28px;
+  --row-px: 24px;
+  --nav-h: 48px;
+  --title-size: 32px;
+  --title-weight: 400;
+  --glabel-case: none;
+  --glabel-size: 14px;
+  --glabel-weight: 500;
+  --glabel-space: 0.01em;
+  --btn-weight: 500;
+  --seg-shadow: none;
+}
+
+[data-theme="material"] {
+  color-scheme: light;
+  /* roles: primary 006A60, primary-container 9EF2E4, secondary-container CCE8E2, surface F4FBF8, outline 6F7977 */
+  --bg: #f4fbf8;
+  --side: #e9f1ee;
+  --side-border: transparent;
+  --card: #e9f0ed;
+  --card-border: transparent;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 3px 1px rgba(0, 0, 0, 0.08);
+  --sep: #c0cac7;
+  --text: #171d1b;
+  --sec: #3f4947;
+  --sec-side: #3f4947;
+  --accent: #006a60;
+  --accent-fill: #006a60;
+  --accent-fill-hover: #005a51;
+  --on-accent: #ffffff;
+  --accent-text: #00504a;
+  --sel-bg: #cce8e2;
+  --sel-text: #05201c;
+  --hover: rgba(0, 106, 96, 0.08);
+  --btn-bg: #cce8e2;
+  --btn-hover: #bcdcd5;
+  --btn-text: #05201c;
+  --seg-track: transparent;
+  --seg-border: #6f7977;
+  --seg-on: #cce8e2;
+  --seg-on-text: #05201c;
+  --field-bg: #f4fbf8;
+  --field-border: #6f7977;
+  --drop-border: #6f7977;
+  --foot-bg: #edf4f1;
+  --foot-border: #c0cac7;
+  --ok: #146c2e;
+  --err: #ba1a1a;
+  --banner-bg: #ffdad6;
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233F4947' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
+
+/* ---------- 3b. Material Gelap (M3 dark scheme, same green-teal seed; tonal surfaces, no heavy shadows) ---------- */
+[data-theme="material-dark"] {
+  color-scheme: dark;
+  /* roles: primary 4DDBCB, on-primary 003731, primary-container 005048, surface 0E1513, outline 899390, on-surface DDE4E1 */
+  --bg: #0e1513;
+  --side: #161d1b;
+  --side-border: transparent;
+  --card: #1a211f;
+  --card-border: transparent;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sep: #3f4947;
+  --text: #dde4e1;
+  --sec: #bec9c6;
+  --sec-side: #bec9c6;
+  --accent: #4ddbcb;
+  --accent-fill: #4ddbcb;
+  --accent-fill-hover: #6ae9d9;
+  --on-accent: #003731;
+  --accent-text: #4ddbcb;
+  --sel-bg: #334b47;
+  --sel-text: #cce8e2;
+  --hover: rgba(77, 219, 203, 0.1);
+  --btn-bg: #334b47;
+  --btn-hover: #3f5a55;
+  --btn-text: #cce8e2;
+  --seg-track: transparent;
+  --seg-border: #899390;
+  --seg-on: #334b47;
+  --seg-on-text: #cce8e2;
+  --field-bg: #0e1513;
+  --field-border: #899390;
+  --drop-border: #899390;
+  --foot-bg: #121916;
+  --foot-border: #3f4947;
+  --ok: #7bdb8f;
+  --err: #ffb4ab;
+  --banner-bg: #5c1d1a;
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23BEC9C6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
