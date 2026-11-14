@@ -2,24 +2,15 @@
 import { currentWindow } from "mygo-runtime";
 import { Rokit } from "./mygo";
 import { initAudio } from "./audio";
+import { initRoblox } from "./roblox";
 import { initDownload } from "./download";
 import { initFrames } from "./frames";
 import { initTheme } from "./theme";
-import { $ } from "./ui";
+import { $, showTab } from "./ui";
 
-/** Sidebar rows switch tabs; a row whose panel does not exist yet is ignored. */
 function initTabs() {
-  const rows = document.querySelectorAll<HTMLButtonElement>("#nav .side-row");
-  for (const row of rows) {
-    row.addEventListener("click", () => {
-      const panel = document.getElementById(`tab-${row.dataset.tab}`);
-      if (!panel) return;
-      for (const r of rows) {
-        r.classList.toggle("sel", r === row);
-        r.toggleAttribute("aria-current", r === row);
-      }
-      for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === panel);
-    });
+  for (const row of document.querySelectorAll<HTMLButtonElement>("#nav .side-row")) {
+    row.addEventListener("click", () => showTab(row.dataset.tab ?? ""));
   }
 }
 
@@ -47,4 +38,5 @@ void initTheme();
 initAudio();
 initFrames();
 initDownload();
+initRoblox();
 void checkTools();

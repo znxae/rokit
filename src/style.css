@@ -141,6 +141,16 @@ select.popup option { background: var(--field-bg); color: var(--text); }
 }
 .inl { display: flex; align-items: center; gap: 8px; }
 
+/* ---- Aset Roblox ---- */
+.atile {
+  flex: none; width: 120px; height: 120px; border-radius: 16px; background: var(--seg-track); color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+}
+.note { margin: 0; padding: 0 16px 16px; font-size: 13px; color: var(--sec); }
+.note.warn { color: var(--text); }
+.legal { margin: 8px 0 0 16px; font-size: 12px; color: var(--sec); }
+[data-theme="glass"] .legal { color: var(--text); }
+
 /* ---- download card ---- */
 .vid { display: flex; gap: 24px; padding: 20px 16px; }
 .poster {

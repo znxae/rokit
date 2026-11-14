@@ -5,6 +5,9 @@ import { $, baseName, errText, fmtDb, fmtDuration, fmtSpeed, segmented, segValue
 const LOSSLESS = new Set(["wav", "flac"]);
 const BARS = 88;
 
+/** Set by initAudio: lets other tabs load a file as the Audio tab's input. */
+export let loadAudioFile: (path: string, title?: string) => Promise<void> = async () => {};
+
 export function initAudio() {
   const tab = $("#tab-audio");
   const pick = $<HTMLButtonElement>("#pick", tab);
@@ -103,6 +106,13 @@ export function initAudio() {
       /* the file still works without the extra line */
     }
   }
+
+  loadAudioFile = async (path, title = "") => {
+    await setInput(path, title);
+    setStatus(status, "", "Belum dikonversi");
+    showError(error, "");
+    render();
+  };
 
   pick.addEventListener("click", () =>
     void run("Membuka file…", async () => {

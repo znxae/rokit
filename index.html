@@ -41,6 +41,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
             <span>Unduh Video</span>
           </button>
+          <button class="side-row" data-tab="roblox" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            <span>Aset Roblox</span>
+          </button>
         </nav>
         <div class="side-bottom">
           <label for="theme">Tema</label>
@@ -295,6 +299,53 @@
               <button class="btn" id="d-open" type="button" hidden>Buka folder</button>
               <button class="btn stop" id="d-cancel" type="button" hidden>Batal</button>
               <button class="btn primary" id="d-go" type="button" disabled>Unduh</button>
+            </div>
+          </footer>
+        </div>
+        <!-- ================= Aset Roblox ================= -->
+        <div class="tab" id="tab-roblox">
+          <header class="toolbar"><span></span><h1>Aset Roblox</h1><div class="tb-slot"></div></header>
+          <div class="scroll">
+            <section>
+              <div class="group">
+                <form class="urlrow in" id="r-form">
+                  <input class="field" id="r-url" type="text" placeholder="Tempel URL aset Roblox atau ID (mis. 1837879082)" aria-label="URL atau ID aset" autocomplete="off" spellcheck="false" />
+                  <button class="btn line" id="r-check" type="submit" disabled>Cek</button>
+                </form>
+                <div class="vid" id="r-card" hidden>
+                  <div class="atile" id="r-tile" aria-hidden="true"></div>
+                  <div class="info">
+                    <strong id="r-name"></strong>
+                    <dl>
+                      <dt>ID</dt><dd id="r-id"></dd>
+                      <dt>Tipe</dt><dd id="r-type"></dd>
+                      <dt>Pembuat</dt><dd id="r-by"></dd>
+                      <dt>Dibuat</dt><dd id="r-created"></dd>
+                    </dl>
+                  </div>
+                </div>
+                <p class="note" id="r-note" hidden></p>
+              </div>
+              <p class="legal">Unduh hanya aset milik Anda atau yang lisensinya mengizinkan; patuhi Ketentuan Layanan Roblox.</p>
+            </section>
+            <section>
+              <div class="group">
+                <div class="row">
+                  <span class="l">Simpan ke<small>Nama ID-nama aset; tidak menimpa file yang sudah ada</small></span>
+                  <span class="path" id="r-out">Downloads\Rokit-Roblox</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <footer class="foot">
+            <div class="msg">
+              <div class="status" id="r-status" role="status">Tempel URL atau ID aset, lalu klik Cek.</div>
+              <pre class="err" id="r-error" hidden></pre>
+            </div>
+            <div class="actions">
+              <button class="btn" id="r-open" type="button" hidden>Buka folder</button>
+              <button class="btn" id="r-audio" type="button" hidden>Buka di tab Audio</button>
+              <button class="btn primary" id="r-go" type="button" disabled>Unduh</button>
             </div>
           </footer>
         </div>

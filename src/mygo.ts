@@ -4,6 +4,21 @@ import { call, type Channel } from "mygo-runtime";
 
 // ---- Types ----
 
+/** AssetMeta is what "Cek" shows. */
+export interface AssetMeta {
+  id: number;
+  name: string;
+  typeId: number;
+  type: string;
+  creator: string;
+  /** yyyy-mm-dd, "" if unknown */
+  created: string;
+  /** what the file will be, in Indonesian */
+  note: string;
+  /** non-empty: why it cannot be downloaded without a login */
+  blocked: string;
+}
+
 /** ConvProgress is streamed while an audio conversion runs. */
 export interface ConvProgress {
   /** 0..100 */
@@ -68,6 +83,17 @@ export interface Opts {
   gainDb: number;
   /** keep | mono | stereo */
   channels: string;
+}
+
+/** RobloxSaved is the finished download. */
+export interface RobloxSaved {
+  path: string;
+  ext: string;
+  /** a Roblox-native format, not a common file */
+  raw: boolean;
+  /** can be opened in the Audio tab */
+  isAudio: boolean;
+  note: string;
 }
 
 /** Saved is the finished download. */
@@ -176,6 +202,20 @@ export const Rokit = {
   /** ProbeVideo reads duration, frame rate and streams of a file. */
   probeVideo(path: string): Promise<VideoInfo> {
     return call("Rokit.ProbeVideo", path);
+  },
+  /**
+   * RobloxCheck ("Cek") parses the input and fetches name, type and creator. It also asks the delivery
+   * endpoint whether the asset can be fetched without a login, so the page can say so before "Unduh".
+   */
+  robloxCheck(input: string): Promise<AssetMeta> {
+    return call("Rokit.RobloxCheck", input);
+  },
+  /**
+   * RobloxDownload saves the raw asset to Downloads/Rokit-Roblox/<id>-<name>.<ext>, never overwriting.
+   * Private, age-gated or removed assets stop with a message; nothing tries to get around that.
+   */
+  robloxDownload(input: string): Promise<RobloxSaved> {
+    return call("Rokit.RobloxDownload", input);
   },
   /** SetTheme saves the theme; unknown names are rejected. */
   setTheme(name: string): Promise<void> {

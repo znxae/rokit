@@ -78,3 +78,14 @@ export function fmtDuration(sec: number) {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 export const dirName = (p: string) => p.replace(/[\\/][^\\/]*$/, "");
+
+/** Shows a tab by name and marks its sidebar row. */
+export function showTab(name: string) {
+  const panel = document.getElementById(`tab-${name}`);
+  if (!panel) return;
+  for (const r of document.querySelectorAll<HTMLButtonElement>("#nav .side-row")) {
+    r.classList.toggle("sel", r.dataset.tab === name);
+    r.toggleAttribute("aria-current", r.dataset.tab === name);
+  }
+  for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === panel);
+}
