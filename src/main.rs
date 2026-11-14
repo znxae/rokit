@@ -1,4 +1,4 @@
-﻿#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui::{self, Color32, FontId, Margin, RichText, Rounding, Shadow, Stroke, TextStyle};
 use std::path::{Path, PathBuf};
@@ -234,7 +234,7 @@ impl App {
         let args = build_args(&input.to_string_lossy(), &self.output.to_string_lossy(), &self.opts);
         self.busy = true;
         self.error.clear();
-        self.status = "Convertingâ€¦".into();
+        self.status = "Converting…".into();
         let (tx, ctx) = (self.tx.clone(), ctx.clone());
         std::thread::spawn(move || {
             let _ = tx.send(Msg::Done(run_ffmpeg(args)));
@@ -268,7 +268,7 @@ impl eframe::App for App {
                     ui.add_enabled_ui(!self.busy, |ui| {
                         card(ui, "Input", |ui| {
                             ui.horizontal(|ui| {
-                                if ui.button("Open fileâ€¦").clicked() {
+                                if ui.button("Open file…").clicked() {
                                     if let Some(p) = rfd::FileDialog::new()
                                         .add_filter("Audio/video", &["mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma", "mp4", "mkv", "webm"])
                                         .pick_file()
@@ -301,7 +301,7 @@ impl eframe::App for App {
                             });
                         });
                         card(ui, "Speed", |ui| {
-                            ui.add(egui::Slider::new(&mut self.opts.speed, 0.25..=4.0).text("Ã—").step_by(0.05));
+                            ui.add(egui::Slider::new(&mut self.opts.speed, 0.25..=4.0).text("×").step_by(0.05));
                             ui.label(RichText::new(speed_hint(self.opts.speed)).small().color(PRIMARY));
                         });
                         card(ui, "Amplify", |ui| {
@@ -315,7 +315,7 @@ impl eframe::App for App {
                             });
                         });
                         card(ui, "Output", |ui| {
-                            if ui.button("Save asâ€¦").clicked() && self.input.is_some() {
+                            if ui.button("Save as…").clicked() && self.input.is_some() {
                                 if let Some(p) = rfd::FileDialog::new()
                                     .set_file_name(self.output.file_name().unwrap_or_default().to_string_lossy())
                                     .save_file()
@@ -349,7 +349,7 @@ impl eframe::App for App {
 
 fn main() -> eframe::Result {
     let opts = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([520.0, 820.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([520.0, 900.0]),
         ..Default::default()
     };
     eframe::run_native("Audio Editor", opts, Box::new(|cc| Ok(Box::new(App::new(cc.egui_ctx.clone())))))
