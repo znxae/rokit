@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -201,5 +202,41 @@ func TestLiveOptions(t *testing.T) {
 	pre := robloxBatchLookup(withPace(t.Context(), 0), []BatchItem{{Input: "1837879082"}, {Input: "1818"}, {Input: "130"}})
 	if pre[1837879082] == nil || pre[1837879082].Err != nil || pre[1818].Err == nil || pre[130].Err == nil {
 		t.Errorf("batch lookup: %+v", pre)
+	}
+}
+
+func TestLoginHelpers(t *testing.T) {
+	ok := "_|WARNING:-DO-NOT-SHARE-" + strings.Repeat("A1b2", 40) + "|_"
+	if !ValidSessionCookie(ok) {
+		t.Error("valid cookie rejected")
+	}
+	for name, v := range map[string]string{"short": "abc", "semicolon": ok + ";x=1", "space": ok + " x", "newline": ok + "\r\nX: y", "long": strings.Repeat("a", 2001), "unicode": ok + "é"} {
+		if ValidSessionCookie(v) {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	if a, err := ParseAuthUser([]byte(`{"id":5,"name":"x","displayName":"y"}`)); err != nil || !a.LoggedIn || a.ID != 5 || a.Name != "x" {
+		t.Errorf("%+v %v", a, err)
+	}
+	for _, bad := range []string{`{}`, `{"id":0,"name":"x"}`, `x`, `{"errors":[{"code":0}]}`} {
+		if _, err := ParseAuthUser([]byte(bad)); err == nil {
+			t.Errorf("%s accepted", bad)
+		}
+	}
+}
+
+func TestCookieOnlyToRobloxAPIHosts(t *testing.T) {
+	setStoredCookie("_|WARNING:-" + strings.Repeat("Z", 120))
+	defer setStoredCookie("")
+	for url, want := range map[string]bool{
+		"https://assetdelivery.roblox.com/v2/assetId/1": true, "https://economy.roblox.com/x": true, "https://users.roblox.com/x": true,
+		"http://assetdelivery.roblox.com/x": false, "https://c0.rbxcdn.com/x": false, "https://evil.example/x": false,
+		"https://assetdelivery.roblox.com.evil.example/x": false, "https://www.roblox.com/x": false,
+	} {
+		req, _ := http.NewRequest("GET", url, nil)
+		attachAuth(req)
+		if got := req.Header.Get("Cookie") != ""; got != want {
+			t.Errorf("%s: cookie sent=%v want %v", url, got, want)
+		}
 	}
 }

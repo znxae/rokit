@@ -108,6 +108,7 @@ func robloxDo(ctx context.Context, method, url string, body []byte, hdr map[stri
 	for k, v := range hdr {
 		req.Header.Set(k, v)
 	}
+	attachAuth(req)
 	resp, err := robloxAPI.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("tidak bisa menghubungi Roblox: %w", err)
@@ -148,7 +149,11 @@ func robloxLocation(ctx context.Context, id int64, o RobloxOpts, typeID int) (st
 	if err != nil {
 		return "", 0, err
 	}
-	return ParseDelivery(b)
+	loc, typ, err := ParseDelivery(b)
+	if err != nil && err.Error() == msgRobloxPriv && loggedIn() {
+		err = errors.New(msgRobloxPrivA)
+	}
+	return loc, typ, err
 }
 
 // RobloxCheck ("Cek") parses the input and fetches name, type and creator. It also asks the delivery
@@ -392,7 +397,7 @@ func robloxBatchLookup(ctx context.Context, items []BatchItem) map[int64]*Delive
 			ids = append(ids, id)
 		}
 	}
-	if len(ids) < 2 {
+	if len(ids) < 2 || loggedIn() { // a logged-in POST would need a CSRF token; single lookups are fine
 		return nil
 	}
 	b, err := robloxDo(ctx, http.MethodPost, "https://assetdelivery.roblox.com/v2/assets/batch", BatchBody(ids), nil)

@@ -95,6 +95,13 @@ export interface Opts {
   channels: string;
 }
 
+/** RobloxAccount is who is logged in (LoggedIn false when nobody). */
+export interface RobloxAccount {
+  loggedIn: boolean;
+  name: string;
+  id: number;
+}
+
 /** RobloxOpts are the optional download choices. Version and Avatar cannot be combined. */
 export interface RobloxOpts {
   /** 0 = latest */
@@ -225,6 +232,10 @@ export const Rokit = {
   probeVideo(path: string): Promise<VideoInfo> {
     return call("Rokit.ProbeVideo", path);
   },
+  /** RobloxAccountInfo says who is logged in, from what is stored (no network). */
+  robloxAccountInfo(): Promise<RobloxAccount> {
+    return call("Rokit.RobloxAccountInfo");
+  },
   /**
    * RobloxCheck ("Cek") parses the input and fetches name, type and creator. It also asks the delivery
    * endpoint whether the asset can be fetched without a login, so the page can say so before "Unduh".
@@ -247,6 +258,14 @@ export const Rokit = {
    */
   robloxDownloadMany(text: string, progress: Channel<BatchItem>): Promise<BatchItem[]> {
     return call("Rokit.RobloxDownloadMany", text, progress);
+  },
+  /** RobloxLogin opens the official Roblox login page in its own window and waits for the login to finish. */
+  robloxLogin(): Promise<RobloxAccount> {
+    return call("Rokit.RobloxLogin");
+  },
+  /** RobloxLogout forgets the stored login. The session on roblox.com itself stays valid until you sign out there. */
+  robloxLogout(): Promise<void> {
+    return call("Rokit.RobloxLogout");
   },
   /** SetTheme saves the theme; unknown names are rejected. */
   setTheme(name: string): Promise<void> {

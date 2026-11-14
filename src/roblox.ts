@@ -1,5 +1,5 @@
 import { Channel } from "mygo-runtime";
-import { Rokit, type AssetMeta, type BatchItem, type RobloxOpts, type RobloxSaved } from "./mygo";
+import { Rokit, type AssetMeta, type BatchItem, type RobloxAccount, type RobloxOpts, type RobloxSaved } from "./mygo";
 import { loadAudioFile } from "./audio";
 import { $, dirName, errText, segmented, segValue, setProgress, setSegDisabled, setStatus, showError, showTab } from "./ui";
 
@@ -44,6 +44,11 @@ export function initRoblox() {
   const avatar = () => segValue(av) === "avatar";
   const options = (): RobloxOpts => ({ version: Math.trunc(Number(ver.value)) || 0, avatar: avatar() && !avRow.hidden, obj: segValue(obj) === "obj" && !objRow.hidden });
 
+  const acct = $("#r-acct", tab);
+  const loginBtn = $<HTMLButtonElement>("#r-login", tab);
+  const ACCT_HELP = acct.textContent ?? "";
+  let account: RobloxAccount | null = null;
+
   let busy = false;
   let meta: AssetMeta | null = null;
   let saved: RobloxSaved | null = null;
@@ -54,6 +59,9 @@ export function initRoblox() {
     setSegDisabled(mode, busy);
     input.disabled = busy;
     list.disabled = busy;
+    loginBtn.disabled = busy;
+    loginBtn.textContent = account?.loggedIn ? "Keluar" : "Masuk Roblox";
+    acct.textContent = account?.loggedIn ? `Masuk sebagai ${account.name}. Login hanya dikirim ke API Roblox; Keluar menghapusnya dari app ini.` : ACCT_HELP;
     ver.disabled = busy || avatar();
     setSegDisabled(av, busy || !!ver.value.trim());
     setSegDisabled(obj, busy);
@@ -153,6 +161,24 @@ export function initRoblox() {
     setStatus(status, "", many() ? "Tempel daftar ID atau URL, satu per baris." : "Tempel URL atau ID aset, lalu klik Cek.");
     render();
   });
+  loginBtn.addEventListener("click", () => {
+    const out = !!account?.loggedIn;
+    void guarded(out ? "Keluar…" : "Menunggu login di jendela Roblox…", async () => {
+      if (out) {
+        await Rokit.robloxLogout();
+        account = null;
+      } else {
+        account = await Rokit.robloxLogin();
+      }
+      reset(); // earlier Cek results no longer match what this account can open
+      setStatus(status, "ok", out ? "Keluar dari akun Roblox." : `Masuk sebagai ${account!.name}.`);
+    });
+  });
+  Rokit.robloxAccountInfo().then((a) => {
+    account = a;
+    render();
+  }, () => {});
+
   ver.addEventListener("input", render);
   segmented(av, render);
   segmented(obj, render);
