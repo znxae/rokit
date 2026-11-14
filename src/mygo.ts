@@ -95,6 +95,16 @@ export interface Opts {
   channels: string;
 }
 
+/** RobloxOpts are the optional download choices. Version and Avatar cannot be combined. */
+export interface RobloxOpts {
+  /** 0 = latest */
+  version: number;
+  /** the avatar-ready model of an accessory or head */
+  avatar: boolean;
+  /** a Mesh as .obj instead of raw .mesh */
+  obj: boolean;
+}
+
 /** RobloxSaved is the finished download. */
 export interface RobloxSaved {
   path: string;
@@ -226,9 +236,10 @@ export const Rokit = {
    * RobloxDownload saves the asset to Downloads/Rokit-Roblox/<id>-<name>.<ext>, never overwriting.
    * A Decal, Face, Shirt, Pants or T-Shirt is a public XML wrapper: the image it points at is fetched instead.
    * Private, age-gated or removed assets stop with a message; nothing tries to get around that.
+   * opts: a version number, the avatar-ready model, or OBJ for meshes (see RobloxOpts).
    */
-  robloxDownload(input: string): Promise<RobloxSaved> {
-    return call("Rokit.RobloxDownload", input);
+  robloxDownload(input: string, opts: RobloxOpts): Promise<RobloxSaved> {
+    return call("Rokit.RobloxDownload", input, opts);
   },
   /**
    * RobloxDownloadMany downloads a pasted list, one line at a time, one request per second, and streams

@@ -335,6 +335,22 @@
               </div>
               <p class="legal">Maksimal 50 aset, berurutan, 1 permintaan per detik. Aset yang butuh login dilewati dengan pesan jelas. Unduh hanya aset milik Anda atau yang lisensinya mengizinkan; patuhi Ketentuan Layanan Roblox.</p>
             </section>
+            <section id="r-opts" hidden>
+              <div class="group">
+                <div class="row">
+                  <span class="l">Versi<small>Kosong = terbaru. Hanya versi yang pernah dipublikasikan bisa diunduh</small></span>
+                  <span class="inl"><input class="field num" id="r-ver" type="number" min="1" max="1000000" step="1" placeholder="terbaru" aria-label="Nomor versi" /></span>
+                </div>
+                <div class="row" id="r-avrow" hidden>
+                  <span class="l">Model<small>Versi siap-avatar (mesh) dari aksesori atau kepala; tidak bisa digabung dengan versi</small></span>
+                  <div class="seg" id="r-av" role="radiogroup" aria-label="Model"><button type="button" class="on" data-v="plain">Biasa</button><button type="button" data-v="avatar">Avatar</button></div>
+                </div>
+                <div class="row" id="r-objrow" hidden>
+                  <span class="l">Format mesh<small>OBJ berisi posisi, UV, dan normal</small></span>
+                  <div class="seg" id="r-obj" role="radiogroup" aria-label="Format mesh"><button type="button" class="on" data-v="raw">Mentah</button><button type="button" data-v="obj">OBJ</button></div>
+                </div>
+              </div>
+            </section>
             <section>
               <div class="group">
                 <div class="row">

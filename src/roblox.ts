@@ -1,5 +1,5 @@
 import { Channel } from "mygo-runtime";
-import { Rokit, type AssetMeta, type BatchItem, type RobloxSaved } from "./mygo";
+import { Rokit, type AssetMeta, type BatchItem, type RobloxOpts, type RobloxSaved } from "./mygo";
 import { loadAudioFile } from "./audio";
 import { $, dirName, errText, segmented, segValue, setProgress, setSegDisabled, setStatus, showError, showTab } from "./ui";
 
@@ -34,6 +34,16 @@ export function initRoblox() {
   let cancelled = false;
   let batchDir = "";
 
+  const opts = $("#r-opts", tab);
+  const ver = $<HTMLInputElement>("#r-ver", tab);
+  const av = $("#r-av", tab);
+  const obj = $("#r-obj", tab);
+  const avRow = $("#r-avrow", tab);
+  const objRow = $("#r-objrow", tab);
+  const ACCESSORY = [8, 17, 41, 42, 43, 44, 45, 46, 47, 79];
+  const avatar = () => segValue(av) === "avatar";
+  const options = (): RobloxOpts => ({ version: Math.trunc(Number(ver.value)) || 0, avatar: avatar() && !avRow.hidden, obj: segValue(obj) === "obj" && !objRow.hidden });
+
   let busy = false;
   let meta: AssetMeta | null = null;
   let saved: RobloxSaved | null = null;
@@ -44,6 +54,12 @@ export function initRoblox() {
     setSegDisabled(mode, busy);
     input.disabled = busy;
     list.disabled = busy;
+    ver.disabled = busy || avatar();
+    setSegDisabled(av, busy || !!ver.value.trim());
+    setSegDisabled(obj, busy);
+    opts.hidden = many() || !meta;
+    avRow.hidden = !meta || !ACCESSORY.includes(meta.typeId);
+    objRow.hidden = !meta || (meta.typeId !== 4 && meta.typeId !== 40);
     const has = many() ? list.value.trim() !== "" : input.value.trim() !== "";
     check.disabled = busy || !input.value.trim();
     go.textContent = many() ? "Unduh semua" : "Unduh";
@@ -59,6 +75,7 @@ export function initRoblox() {
     meta = null;
     saved = null;
     card.hidden = true;
+    ver.value = "";
     note.hidden = true;
     out.textContent = "Downloads\Rokit-Roblox";
     out.title = "";
@@ -110,7 +127,7 @@ export function initRoblox() {
 
   go.addEventListener("click", () =>
     many() ? undefined : void guarded("Mengunduh…", async () => {
-      const s = await Rokit.robloxDownload(input.value);
+      const s = await Rokit.robloxDownload(input.value, options());
       saved = s;
       out.textContent = s.path;
       out.title = s.path;
@@ -136,6 +153,9 @@ export function initRoblox() {
     setStatus(status, "", many() ? "Tempel daftar ID atau URL, satu per baris." : "Tempel URL atau ID aset, lalu klik Cek.");
     render();
   });
+  ver.addEventListener("input", render);
+  segmented(av, render);
+  segmented(obj, render);
   list.addEventListener("input", () => {
     batchDir = "";
     render();

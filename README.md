@@ -22,12 +22,14 @@ Paste an asset **ID**, `rbxassetid://ID`, or a URL on `roblox.com`, `www.roblox.
 
 - **No login, ever.** The app only calls Roblox's public endpoints without cookies or tokens. It never asks for, reads or sends a `.ROBLOSECURITY` cookie.
   Private, age-gated or removed assets stop with a clear message; nothing tries to get around access controls.
-- Endpoints: `economy.roblox.com/v2/assets/ID/details` (name, type, creator) and `assetdelivery.roblox.com/v2/assetId/ID` (download location).
+- Endpoints: `economy.roblox.com/v2/assets/ID/details` (name, type, creator) and `assetdelivery.roblox.com/v2/assetId/ID` (download location). "Unduh semua" first asks `POST assetdelivery.roblox.com/v2/assets/batch` for all locations at once.
   Roblox reports delivery errors as HTTP 200 with an `errors` list (401 login needed, 403/409 not authorized, 404 not found).
 - Downloads are followed only to `https://*.rbxcdn.com`.
 - Saved to `Downloads\Rokit-Roblox\<id>-<name>.<ext>`, never overwriting (`(1)`, `(2)`, …).
 - Extension comes from the file's real bytes: audio `.ogg`/`.mp3`, images `.png`, meshes `.mesh` (raw Roblox format), models/hats/accessories `.rbxmx` or `.rbxm` (raw, open in Roblox Studio).
 - **Decal / Face / Shirt / Pants / T-Shirt** are small public XML wrappers. The app reads the image ID inside and downloads that image as PNG, and says "Decal -> gambar ID xxx". A Decal's ID is not its Image's ID.
+- **Options** (single download, after Cek): *Versi* downloads an older published version (`.../version/N`, saved as `...-vN`); *Model Avatar* (hats, accessories, heads) asks for the avatar-ready mesh model with the `Roblox-AssetFormat` header; *Format mesh: OBJ* converts a Mesh to `.obj` (v1-v4 mesh files, first LOD, skinning ignored; v4 is not yet checked against a real file). Version and Avatar cannot be combined.
+- Unknown bytes fall back to the type: Place `.rbxl`, Model/Animation/Plugin `.rbxm`.
 - Audio: "Buka di tab Audio" loads the saved file as the Audio tab's input.
 - Use only assets you own or whose license allows it, and follow Roblox's Terms of Use.
 
@@ -41,7 +43,7 @@ Paste an asset **ID**, `rbxassetid://ID`, or a URL on `roblox.com`, `www.roblox.
 | Wrapper XML read for Decal etc. | 1 MB |
 | "Unduh semua" list | max 50 lines, one per line, sequential |
 | "Unduh semua" pace | 1 request per second (each asset needs about 3 requests) |
-| HTTP 429 | single download shows "Terlalu banyak permintaan, coba lagi nanti"; a list stops and marks the rest skipped |
+| HTTP 429 | honors `Retry-After`: a list waits up to 60 s and retries that asset once; otherwise it stops and marks the rest skipped. A single download shows "Terlalu banyak permintaan, coba lagi nanti" |
 | User-Agent | `Rokit-Asset-Downloader/1.0` |
 
 What works without login (checked live): Audio, Image, Mesh, public Decals, Shirt/Pants templates, Hats and accessories.

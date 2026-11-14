@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,6 +28,8 @@ type RobloxSaved struct {
 
 const (
 	pageGap       = time.Second // batch pace: one request per second
+	maxMeshBytes  = 64 << 20    // largest mesh converted to OBJ in memory
+	maxRetryWait  = 60 * time.Second
 	maxWrapperXML = 1 << 20
 )
 
@@ -85,15 +88,26 @@ func paceWait(ctx context.Context) error {
 
 // robloxGet reads a small API answer. No credentials are ever attached.
 func robloxGet(ctx context.Context, url string) ([]byte, error) {
+	return robloxDo(ctx, http.MethodGet, url, nil, nil)
+}
+
+// robloxDo is robloxGet with a method, optional JSON body and extra headers; a 429 carries Retry-After.
+func robloxDo(ctx context.Context, method, url string, body []byte, hdr map[string]string) ([]byte, error) {
 	if err := paceWait(ctx); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", robloxUA)
 	req.Header.Set("Accept", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range hdr {
+		req.Header.Set(k, v)
+	}
 	resp, err := robloxAPI.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("tidak bisa menghubungi Roblox: %w", err)
@@ -104,6 +118,10 @@ func robloxGet(ctx context.Context, url string) ([]byte, error) {
 		return nil, err
 	}
 	if err := StatusError(resp.StatusCode); err != nil {
+		var re *RateError
+		if errors.As(err, &re) {
+			re.Wait = ParseRetryAfter(resp.Header.Get("Retry-After"), time.Now())
+		}
 		return nil, err
 	}
 	return b, nil
@@ -117,8 +135,16 @@ func robloxDetails(ctx context.Context, id int64) (AssetMeta, error) {
 	return ParseDetails(b)
 }
 
-func robloxLocation(ctx context.Context, id int64) (string, int, error) {
-	b, err := robloxGet(ctx, "https://assetdelivery.roblox.com/v2/assetId/"+strconv.FormatInt(id, 10))
+func robloxLocation(ctx context.Context, id int64, o RobloxOpts, typeID int) (string, int, error) {
+	var hdr map[string]string
+	if o.Avatar {
+		f := AvatarFormatFor(typeID)
+		if f == "" {
+			return "", 0, errors.New("model avatar hanya untuk aksesori dan kepala")
+		}
+		hdr = map[string]string{"Roblox-AssetFormat": f}
+	}
+	b, err := robloxDo(ctx, http.MethodGet, DeliveryURL(id, o), nil, hdr)
 	if err != nil {
 		return "", 0, err
 	}
@@ -138,8 +164,9 @@ func (r *Rokit) RobloxCheck(ctx context.Context, input string) (AssetMeta, error
 	if err != nil {
 		return AssetMeta{}, err
 	}
-	if _, _, derr := robloxLocation(cctx, id); derr != nil {
-		if derr.Error() == msgRobloxRate {
+	if _, _, derr := robloxLocation(cctx, id, RobloxOpts{}, 0); derr != nil {
+		var re *RateError
+		if errors.As(derr, &re) {
 			return AssetMeta{}, derr
 		}
 		m.Blocked = derr.Error()
@@ -153,24 +180,37 @@ func (r *Rokit) RobloxCheck(ctx context.Context, input string) (AssetMeta, error
 // RobloxDownload saves the asset to Downloads/Rokit-Roblox/<id>-<name>.<ext>, never overwriting.
 // A Decal, Face, Shirt, Pants or T-Shirt is a public XML wrapper: the image it points at is fetched instead.
 // Private, age-gated or removed assets stop with a message; nothing tries to get around that.
-func (r *Rokit) RobloxDownload(ctx context.Context, input string) (RobloxSaved, error) {
+// opts: a version number, the avatar-ready model, or OBJ for meshes (see RobloxOpts).
+func (r *Rokit) RobloxDownload(ctx context.Context, input string, opts RobloxOpts) (RobloxSaved, error) {
 	id, err := ParseAssetRef(input)
 	if err != nil {
 		return RobloxSaved{}, err
 	}
-	return robloxFetch(ctx, id, 0)
+	if err := opts.Validate(); err != nil {
+		return RobloxSaved{}, err
+	}
+	return robloxFetch(ctx, id, 0, opts, nil)
 }
 
-func robloxFetch(ctx context.Context, id int64, depth int) (RobloxSaved, error) {
+// robloxFetch downloads one asset. pre is an already looked-up location (from the batch endpoint) or nil.
+func robloxFetch(ctx context.Context, id int64, depth int, opts RobloxOpts, pre *Delivered) (RobloxSaved, error) {
 	cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()
 	meta, err := robloxDetails(cctx, id)
 	if err != nil {
 		return RobloxSaved{}, err
 	}
-	loc, typeID, err := robloxLocation(cctx, id)
-	if err != nil {
-		return RobloxSaved{}, err
+	var loc string
+	var typeID int
+	switch {
+	case pre != nil && pre.Err != nil:
+		return RobloxSaved{}, pre.Err
+	case pre != nil:
+		loc, typeID = pre.Loc, pre.TypeID
+	default:
+		if loc, typeID, err = robloxLocation(cctx, id, opts, meta.TypeID); err != nil {
+			return RobloxSaved{}, err
+		}
 	}
 	if !ValidCDNURL(loc) {
 		return RobloxSaved{}, errors.New("Roblox memberi alamat unduhan yang tidak diizinkan (bukan *.rbxcdn.com lewat https)")
@@ -235,7 +275,7 @@ func robloxFetch(ctx context.Context, id int64, depth int) (RobloxSaved, error) 
 
 	if IsWrapperType(typeID) && ext == "rbxmx" && n <= maxWrapperXML && depth == 0 {
 		if imgID, ok := ParseWrapperImage(typeID, body); ok {
-			saved, err := robloxFetch(ctx, imgID, depth+1)
+			saved, err := robloxFetch(ctx, imgID, depth+1, RobloxOpts{}, nil)
 			via := fmt.Sprintf("%s -> gambar ID %d", AssetTypeName(typeID), imgID)
 			if err != nil {
 				return RobloxSaved{}, fmt.Errorf("%s: %w", via, err)
@@ -246,7 +286,32 @@ func robloxFetch(ctx context.Context, id int64, depth int) (RobloxSaved, error) 
 		}
 	}
 
-	dst := UniquePath(dir, RobloxFileStem(id, meta.Name), ext)
+	stem := RobloxFileStem(id, meta.Name)
+	if opts.OBJ && (typeID == 4 || typeID == 40) && ext == "mesh" {
+		if n > maxMeshBytes {
+			return RobloxSaved{}, errors.New("mesh terlalu besar untuk dikonversi ke OBJ; unduh sebagai .mesh mentah")
+		}
+		data, err := os.ReadFile(tmp.Name())
+		if err != nil {
+			return RobloxSaved{}, err
+		}
+		obj, err := MeshToOBJ(data)
+		if err != nil {
+			return RobloxSaved{}, err
+		}
+		if err := os.WriteFile(tmp.Name(), obj, 0o644); err != nil {
+			return RobloxSaved{}, err
+		}
+		dst := UniquePath(dir, stem, "obj")
+		if err := moveFile(tmp.Name(), dst); err != nil {
+			return RobloxSaved{}, err
+		}
+		return RobloxSaved{Path: dst, Ext: "obj", Note: "Mesh dikonversi ke OBJ (posisi, UV, normal)."}, nil
+	}
+	if opts.Version > 0 {
+		stem += "-v" + strconv.Itoa(opts.Version)
+	}
+	dst := UniquePath(dir, stem, ext)
 	if err := moveFile(tmp.Name(), dst); err != nil {
 		return RobloxSaved{}, err
 	}
@@ -266,6 +331,7 @@ func (r *Rokit) RobloxDownloadMany(ctx context.Context, text string, progress *m
 		_ = progress.Send(items[i])
 	}
 	pctx := withPace(ctx, pageGap)
+	pre := robloxBatchLookup(pctx, items)
 	seen := map[int64]bool{}
 	stopped := ""
 	for i := range items {
@@ -288,10 +354,22 @@ func (r *Rokit) RobloxDownloadMany(ctx context.Context, text string, progress *m
 			seen[id] = true
 			it.Status = "jalan"
 			_ = progress.Send(*it)
-			s, ferr := robloxFetch(pctx, id, 0)
+			d := pre[id]
+			s, ferr := robloxFetch(pctx, id, 0, RobloxOpts{}, d)
+			var re *RateError
+			if errors.As(ferr, &re) && re.Wait > 0 && re.Wait <= maxRetryWait {
+				it.Message = fmt.Sprintf("menunggu %d dtk (Roblox membatasi)", int(re.Wait.Seconds()))
+				_ = progress.Send(*it)
+				select {
+				case <-time.After(re.Wait):
+					s, ferr = robloxFetch(pctx, id, 0, RobloxOpts{}, d)
+				case <-ctx.Done():
+					ferr = ctx.Err()
+				}
+			}
 			if ferr != nil {
 				it.Status, it.Message = "gagal", ferr.Error()
-				if ferr.Error() == msgRobloxRate {
+				if errors.As(ferr, &re) {
 					stopped = "berhenti karena Roblox membatasi permintaan; coba lagi nanti"
 				}
 			} else {
@@ -301,4 +379,34 @@ func (r *Rokit) RobloxDownloadMany(ctx context.Context, text string, progress *m
 		_ = progress.Send(*it)
 	}
 	return items, nil
+}
+
+// robloxBatchLookup asks the batch endpoint for every distinct valid ID in one request, saving one request
+// per asset. Any failure returns nil and each asset is then looked up on its own.
+func robloxBatchLookup(ctx context.Context, items []BatchItem) map[int64]*Delivered {
+	var ids []int64
+	seen := map[int64]bool{}
+	for _, it := range items {
+		if id, err := ParseAssetRef(it.Input); err == nil && !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) < 2 {
+		return nil
+	}
+	b, err := robloxDo(ctx, http.MethodPost, "https://assetdelivery.roblox.com/v2/assets/batch", BatchBody(ids), nil)
+	if err != nil {
+		return nil
+	}
+	got, err := ParseBatch(b)
+	if err != nil {
+		return nil
+	}
+	out := map[int64]*Delivered{}
+	for id, d := range got {
+		d := d
+		out[id] = &d
+	}
+	return out
 }

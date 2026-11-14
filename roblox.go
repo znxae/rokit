@@ -169,7 +169,7 @@ func DeliveryError(code int, msg string) error {
 	case 404:
 		return errors.New(msgRobloxGone)
 	case 429:
-		return errors.New(msgRobloxRate)
+		return &RateError{}
 	}
 	return fmt.Errorf("Roblox menolak permintaan (%d): %s", code, msg)
 }
@@ -220,6 +220,10 @@ func ExtFor(typeID int, h []byte) (ext string, raw bool) {
 		return "ogg", false
 	case 4, 40:
 		return "mesh", true
+	case 9:
+		return "rbxl", true
+	case 10, 24, 38:
+		return "rbxm", true
 	}
 	return "bin", true
 }
@@ -273,13 +277,125 @@ func StatusError(code int) error {
 	case code == 200:
 		return nil
 	case code == 429:
-		return errors.New(msgRobloxRate)
+		return &RateError{}
 	case code == 401 || code == 403:
 		return errors.New(msgRobloxPriv)
 	case code == 404:
 		return errors.New(msgRobloxGone)
 	}
 	return fmt.Errorf("Roblox menjawab HTTP %d", code)
+}
+
+// RateError is HTTP 429. Wait is Roblox's Retry-After (0 when absent or unreadable).
+type RateError struct{ Wait time.Duration }
+
+func (*RateError) Error() string { return msgRobloxRate }
+
+// ParseRetryAfter reads a Retry-After header: whole seconds or an HTTP date. Bad or past values give 0.
+func ParseRetryAfter(v string, now time.Time) time.Duration {
+	v = strings.TrimSpace(v)
+	if n, err := strconv.Atoi(v); err == nil {
+		return time.Duration(max(n, 0)) * time.Second
+	}
+	if t, err := time.Parse(time.RFC1123, v); err == nil && t.After(now) {
+		return t.Sub(now)
+	}
+	return 0
+}
+
+// RobloxOpts are the optional download choices. Version and Avatar cannot be combined.
+type RobloxOpts struct {
+	Version int  `json:"version"` // 0 = latest
+	Avatar  bool `json:"avatar"`  // the avatar-ready model of an accessory or head
+	OBJ     bool `json:"obj"`     // a Mesh as .obj instead of raw .mesh
+}
+
+func (o RobloxOpts) Validate() error {
+	switch {
+	case o.Version < 0 || o.Version > 1_000_000:
+		return errors.New("versi harus angka 1 atau lebih")
+	case o.Version > 0 && o.Avatar:
+		return errors.New("versi dan model avatar tidak bisa dipakai bersamaan")
+	}
+	return nil
+}
+
+// AvatarFormatFor is the Roblox-AssetFormat header value for a type ("" when it has none).
+func AvatarFormatFor(typeID int) string {
+	switch typeID {
+	case 8, 41, 42, 43, 44, 45, 46, 47:
+		return "avatar_meshpart_accessory"
+	case 17, 79:
+		return "avatar_meshpart_head"
+	}
+	return ""
+}
+
+// DeliveryURL is the public delivery endpoint for an asset, optionally a given version.
+func DeliveryURL(id int64, o RobloxOpts) string {
+	s := strconv.FormatInt(id, 10)
+	switch {
+	case o.Avatar:
+		return "https://assetdelivery.roblox.com/v2/asset/?id=" + s
+	case o.Version > 0:
+		return "https://assetdelivery.roblox.com/v2/assetId/" + s + "/version/" + strconv.Itoa(o.Version)
+	}
+	return "https://assetdelivery.roblox.com/v2/assetId/" + s
+}
+
+// Delivered is one asset's answer from the batch endpoint.
+type Delivered struct {
+	Loc    string
+	TypeID int
+	Err    error
+}
+
+// BatchBody is the request body for the batch endpoint (requestId is the asset ID).
+func BatchBody(ids []int64) []byte {
+	type it struct {
+		RequestID string `json:"requestId"`
+		AssetID   int64  `json:"assetId"`
+	}
+	out := make([]it, len(ids))
+	for i, id := range ids {
+		out[i] = it{strconv.FormatInt(id, 10), id}
+	}
+	b, _ := json.Marshal(out)
+	return b
+}
+
+// ParseBatch reads the batch endpoint's answer into a map keyed by asset ID.
+func ParseBatch(b []byte) (map[int64]Delivered, error) {
+	var d []struct {
+		RequestID   string `json:"requestId"`
+		AssetTypeID int    `json:"assetTypeId"`
+		Locations   []struct {
+			Location string `json:"location"`
+		} `json:"locations"`
+		Errors []struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(b, &d); err != nil {
+		return nil, errors.New("jawaban Roblox tidak bisa dibaca")
+	}
+	out := map[int64]Delivered{}
+	for _, x := range d {
+		id, err := positiveID(x.RequestID)
+		if err != nil {
+			continue
+		}
+		switch {
+		case len(x.Errors) > 0:
+			out[id] = Delivered{Err: DeliveryError(x.Errors[0].Code, x.Errors[0].Message)}
+		case len(x.Locations) == 0 || x.Locations[0].Location == "":
+			out[id] = Delivered{Err: errors.New(msgRobloxGone)}
+		default:
+			out[id] = Delivered{Loc: x.Locations[0].Location, TypeID: x.AssetTypeID}
+		}
+	}
+	return out, nil
 }
 
 // MaxBatch is the most assets one list may hold.

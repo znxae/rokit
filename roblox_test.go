@@ -124,7 +124,8 @@ func TestExtFor(t *testing.T) {
 		{3, "", "ogg", false}, // unknown bytes: fall back to the type
 		{1, "zz", "png", false},
 		{4, "zz", "mesh", true},
-		{9, "zz", "bin", true},
+		{9, "zz", "rbxl", true},
+		{99, "zz", "bin", true},
 	} {
 		ext, raw := ExtFor(c.ty, []byte(c.head))
 		if ext != c.ext || raw != c.raw {
@@ -176,14 +177,14 @@ func TestLiveRoblox(t *testing.T) {
 	if err != nil || m.Type != "Audio" || m.Blocked != "" {
 		t.Fatalf("check: %+v %v", m, err)
 	}
-	s, err := r.RobloxDownload(t.Context(), "1837879082")
+	s, err := r.RobloxDownload(t.Context(), "1837879082", RobloxOpts{})
 	if err != nil || s.Ext != "ogg" || !s.IsAudio {
 		t.Fatalf("download: %+v %v", s, err)
 	}
 	if b, _ := os.ReadFile(s.Path); len(b) < 1000 || string(b[:4]) != "OggS" {
 		t.Errorf("not an Ogg file (%d bytes)", len(b))
 	}
-	if _, err := r.RobloxDownload(t.Context(), "1818"); err == nil || err.Error() != msgRobloxPriv {
+	if _, err := r.RobloxDownload(t.Context(), "1818", RobloxOpts{}); err == nil || err.Error() != msgRobloxPriv {
 		t.Errorf("private asset: %v", err)
 	}
 }
@@ -316,7 +317,7 @@ func TestLiveTypes(t *testing.T) {
 		{"Decal 176217906 (login)", 176217906}, {"Mesh 1028604", 1028604}, {"Shirt 144076358", 144076358},
 		{"Hat 1028606", 1028606}, {"Place 1818", 1818}, {"Missing 130", 130},
 	} {
-		s, err := robloxFetch(ctx, c.id, 0)
+		s, err := robloxFetch(ctx, c.id, 0, RobloxOpts{}, nil)
 		if err != nil {
 			t.Logf("%-26s -> %v", c.label, err)
 			continue
