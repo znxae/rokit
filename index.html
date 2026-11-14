@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rokit Audio Editor</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Rokit Audio Editor</h1>
+        <p class="muted">Konversi, ubah kecepatan, dan perkeras audio dengan ffmpeg</p>
+      </header>
+
+      <div id="tools" class="banner" hidden></div>
+
+      <section class="card">
+        <h2>File input</h2>
+        <button id="pick" class="drop" type="button">
+          <span id="pick-title">Pilih file audio</span>
+          <span id="pick-sub" class="muted" hidden>Klik untuk mengganti file</span>
+        </button>
+        <form id="url-form" class="row">
+          <input id="url" type="url" placeholder="atau tempel URL (YouTube, TikTok, …)" autocomplete="off" spellcheck="false" />
+          <button id="fetch" type="submit" class="btn" disabled>Ambil</button>
+        </form>
+        <p id="url-err" class="small err" hidden>URL harus diawali http:// atau https://</p>
+      </section>
+
+      <section class="card">
+        <h2>Format &amp; bitrate</h2>
+        <div class="two">
+          <label>Format
+            <select id="format">
+              <option>mp3</option><option>wav</option><option>flac</option>
+              <option>ogg</option><option>m4a</option><option>opus</option>
+            </select>
+          </label>
+          <label>Bitrate
+            <select id="bitrate">
+              <option value="64">64 kbps</option><option value="96">96 kbps</option>
+              <option value="128">128 kbps</option><option value="160">160 kbps</option>
+              <option value="192" selected>192 kbps</option><option value="256">256 kbps</option>
+              <option value="320">320 kbps</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Kecepatan</h2>
+        <div class="slider">
+          <input id="speed" type="range" min="0.25" max="4" step="0.05" value="1" />
+          <span id="speed-chip" class="chip">1.00×</span>
+        </div>
+        <p id="speed-hint" class="small muted">Speed normal (1x)</p>
+      </section>
+
+      <section class="card">
+        <h2>Perkeras suara</h2>
+        <div class="slider">
+          <input id="gain" type="range" min="-20" max="20" step="0.5" value="0" />
+          <span id="gain-chip" class="chip">+0.0 dB</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Channel</h2>
+        <div class="seg" role="radiogroup" aria-label="Channel">
+          <label><input type="radio" name="ch" value="keep" checked /><span>Asli</span></label>
+          <label><input type="radio" name="ch" value="mono" /><span>Mono</span></label>
+          <label><input type="radio" name="ch" value="stereo" /><span>Stereo</span></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>File output</h2>
+        <div class="row out">
+          <button id="save" type="button" class="btn" disabled>Simpan sebagai…</button>
+          <span id="out-path" class="small muted path">—</span>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <button id="convert" type="button" class="primary" disabled>Convert</button>
+      <p id="status" class="status" role="status">Pilih file input atau tempel URL.</p>
+      <pre id="error" class="err" hidden></pre>
+    </footer>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
