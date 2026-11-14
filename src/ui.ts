@@ -25,6 +25,19 @@ export function setStatus(el: HTMLElement, kind: Kind, text: string) {
   el.append(span);
 }
 
+/** Progress in the bottom bar: text on the left, text on the right, a bar below. Safe to call on every tick. */
+export function setProgress(el: HTMLElement, pct: number, left: string, right = "") {
+  let prog = el.querySelector<HTMLElement>(".prog");
+  if (!prog) {
+    el.className = "status";
+    el.innerHTML = '<div class="prog"><div class="t"><span></span><b></b></div><div class="track"><i></i></div></div>'; // constant markup
+    prog = el.querySelector<HTMLElement>(".prog")!;
+  }
+  prog.querySelector("span")!.textContent = left;
+  prog.querySelector("b")!.textContent = right;
+  prog.querySelector<HTMLElement>(".track i")!.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+
 export function showError(el: HTMLElement, msg: string) {
   el.textContent = msg;
   el.hidden = !msg;
@@ -53,3 +66,15 @@ export const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 export const fmtSpeed = (v: number) => `${v.toFixed(2)}×`;
 export const fmtDb = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)} dB`;
 export const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** 1800 -> "1.800" (Indonesian grouping). */
+export const fmtInt = (n: number) => n.toLocaleString("id-ID");
+/** 222 -> "3:42", 3725 -> "1:02:05". */
+export function fmtDuration(sec: number) {
+  const s = Math.round(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+export const dirName = (p: string) => p.replace(/[\\/][^\\/]*$/, "");

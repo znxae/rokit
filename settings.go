@@ -10,11 +10,11 @@ import (
 )
 
 // Themes the page can ask for; "auto" follows the system and is resolved by the page.
-var themeNames = []string{"auto", "apple", "dark", "material", "material-dark", "oled"}
+var themeNames = []string{"auto", "apple", "dark", "material", "material-dark", "oled", "glass"}
 
 // themeBackground is the window color shown until the page paints (matches --bg in themes.css).
 var themeBackground = map[string]string{
-	"auto": "#F5F5F7", "apple": "#F5F5F7", "dark": "#1C1C1E", "material": "#F4FBF8", "material-dark": "#0E1513", "oled": "#000000",
+	"auto": "#F5F5F7", "apple": "#F5F5F7", "dark": "#1C1C1E", "material": "#F4FBF8", "material-dark": "#0E1513", "oled": "#000000", "glass": "#D6E9F8",
 }
 
 type settings struct {

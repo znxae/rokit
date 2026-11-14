@@ -51,10 +51,13 @@ func (r *Rokit) ProbeVideo(ctx context.Context, path string) (VideoInfo, error) 
 	return probeFile(ctx, path)
 }
 
-// SuggestFramesDir is Downloads/<video name>, made unique so nothing is overwritten.
-func (r *Rokit) SuggestFramesDir(input string) string {
+// SuggestFramesDir is <parent>/<video name> (parent "" = Downloads), made unique so nothing is overwritten.
+func (r *Rokit) SuggestFramesDir(input, parent string) string {
+	if parent == "" {
+		parent = downloadsDir()
+	}
 	stem := strings.TrimSuffix(filepath.Base(input), filepath.Ext(input))
-	return UniqueDirPath(downloadsDir(), SanitizeFilename(stem))
+	return UniqueDirPath(parent, SanitizeFilename(stem))
 }
 
 // ExtractFrames writes frame_00001.png|jpg... into a fresh folder and streams progress.

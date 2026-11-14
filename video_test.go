@@ -197,3 +197,16 @@ func TestParseMeta(t *testing.T) {
 		}
 	}
 }
+
+func TestParseOutTime(t *testing.T) {
+	for _, c := range []struct {
+		in string
+		v  float64
+		ok bool
+	}{{"out_time_us=1500000", 1.5, true}, {"out_time_us=N/A", 0, false}, {"out_time_us=-9223372036854775807", 0, false}, {"frame=3", 0, false}} {
+		v, ok := ParseOutTime(c.in)
+		if ok != c.ok || (ok && v != c.v) {
+			t.Errorf("ParseOutTime(%q) = %v,%v", c.in, v, ok)
+		}
+	}
+}

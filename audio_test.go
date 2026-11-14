@@ -126,11 +126,11 @@ func TestValidURL(t *testing.T) {
 func TestSanitizeFilename(t *testing.T) {
 	for in, want := range map[string]string{
 		`a<b>:c"d/e\f|g?h*i`: "a_b__c_d_e_f_g_h_i",
-		"  ..Title.. ":        "Title",
-		"???":                 "___",
-		"  . ":                "audio",
-		"tab\there":           "tab_here",
-		"Lagu — Ünïcode 音楽":   "Lagu — Ünïcode 音楽",
+		"  ..Title.. ":       "Title",
+		"???":                "___",
+		"  . ":               "audio",
+		"tab\there":          "tab_here",
+		"Lagu — Ünïcode 音楽":  "Lagu — Ünïcode 音楽",
 	} {
 		if got := SanitizeFilename(in); got != want {
 			t.Errorf("%q: got %q want %q", in, got, want)
@@ -225,7 +225,7 @@ func TestRealFFmpegPipeline(t *testing.T) {
 		{"m4a", 1, 0, "keep", 2}, {"opus", 1, 0, "keep", 2}, {"mp3", 0.25, 0, "keep", 2}, {"wav", 4, -6, "keep", 2}, {"mp3", 1.5, 3, "mono", 1}} {
 		out := filepath.Join(dir, "case"+strconv.Itoa(i)+"."+k.f)
 		r := &Rokit{}
-		if err := r.Convert(t.Context(), input, out, Opts{Format: k.f, Bitrate: 128, Speed: k.speed, GainDB: k.g, Channels: k.ch}); err != nil {
+		if err := r.Convert(t.Context(), input, out, Opts{Format: k.f, Bitrate: 128, Speed: k.speed, GainDB: k.g, Channels: k.ch}, nil); err != nil {
 			t.Fatalf("%s x%v: %v", k.f, k.speed, err)
 		}
 		if d := probe(out, "format=duration"); d < src/k.speed-0.4 || d > src/k.speed+0.4 {

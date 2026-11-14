@@ -193,7 +193,7 @@ func lastLine(s string) string {
 }
 
 // Convert runs ffmpeg. A downloaded temp input is deleted after success.
-func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts) error {
+func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts, progress *mygo.Channel[ConvProgress]) error {
 	if err := o.Validate(); err != nil {
 		return err
 	}
@@ -215,11 +215,29 @@ func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts) error
 	if info, err := probeFile(cctx, input); err == nil && !info.HasAudio {
 		return errors.New(noAudioMsg)
 	}
-	cmd := exec.CommandContext(cctx, "ffmpeg", BuildArgs(input, output, o)...)
+	// The output lasts duration / speed; that is what 100% means.
+	total := 0.0
+	if info, err := probeFile(cctx, input); err == nil && info.Duration > 0 {
+		total = info.Duration / o.Speed
+	}
+	args := append([]string{"-progress", "pipe:1", "-nostats"}, BuildArgs(input, output, o)...)
+	cmd := exec.CommandContext(cctx, "ffmpeg", args...)
 	hideWindow(cmd)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	out, err := cmd.StdoutPipe()
+	if err == nil {
+		err = cmd.Start()
+	}
+	if err == nil {
+		scanLines(out, func(line string) {
+			if t, ok := ParseOutTime(line); ok && total > 0 && progress != nil {
+				_ = progress.Send(ConvProgress{Percent: min(100, t/total*100)})
+			}
+		})
+		err = cmd.Wait()
+	}
+	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return errors.New(ffmpegMsg)
 		}

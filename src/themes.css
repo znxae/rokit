@@ -246,3 +246,59 @@
   --banner-bg: #5c1d1a;
   --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23BEC9C6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
 }
+
+/* ---------- 6. Kaca (glassmorphism) ----------
+ * Panels are translucent white over a static backdrop (style.css, "Kaca" section). Text stays on the panel,
+ * so contrast is measured against the darkest backdrop color (#4f9fd8): text 11.6:1, secondary 6.6:1,
+ * accent text 6.0:1, ok 5.3:1, err 5.5:1 at 0.62 white. Without backdrop-filter the panels are solid. */
+[data-theme="glass"] {
+  color-scheme: light;
+  --r-group: 18px;
+  --r-ctl: 10px;
+  --r-btn: 10px;
+  --r-seg: 10px;
+  --r-seg-btn: 8px;
+  --r-nav: 10px;
+  --r-drop: 18px;
+  --card-shadow: 0 8px 32px rgba(31, 60, 90, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --bg: #d6e9f8;
+  --side: #e9f1f7;
+  --side-border: rgba(255, 255, 255, 0.6);
+  --card: #f1f6fa;
+  --card-border: rgba(255, 255, 255, 0.6);
+  --sep: rgba(60, 90, 120, 0.14);
+  --text: #1d1d1f;
+  --sec: #45454b;
+  --sec-side: #45454b;
+  --accent: #007aff;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #0066cc;
+  --on-accent: #ffffff;
+  --accent-text: #00489e;
+  --sel-bg: rgba(0, 122, 255, 0.18);
+  --sel-text: #003a7a;
+  --hover: rgba(255, 255, 255, 0.45);
+  --btn-bg: rgba(255, 255, 255, 0.78);
+  --btn-hover: rgba(255, 255, 255, 0.95);
+  --btn-text: #00489e;
+  --seg-track: rgba(118, 118, 128, 0.16);
+  --seg-on: #ffffff;
+  --seg-on-text: #1d1d1f;
+  --field-bg: #fbfdff;
+  --field-border: rgba(60, 90, 120, 0.22);
+  --drop-border: rgba(60, 90, 120, 0.3);
+  --foot-bg: #eef4f9;
+  --foot-border: rgba(255, 255, 255, 0.6);
+  --ok: #13602a;
+  --err: #a01b11;
+  --banner-bg: rgba(255, 241, 240, 0.94);
+  --chev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2345454B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [data-theme="glass"] {
+    --card: rgba(255, 255, 255, 0.62);
+    --side: rgba(255, 255, 255, 0.58);
+    --foot-bg: rgba(255, 255, 255, 0.62);
+    --field-bg: rgba(255, 255, 255, 0.86);
+  }
+}

@@ -85,6 +85,16 @@ func ParseFFmpegProgress(line string) (int, bool) {
 	return n, err == nil
 }
 
+// ParseOutTime reads the "out_time_us=N" line of `-progress` output as seconds.
+func ParseOutTime(line string) (float64, bool) {
+	v, ok := strings.CutPrefix(strings.TrimSpace(line), "out_time_us=")
+	if !ok {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+	return float64(n) / 1e6, err == nil && n >= 0 // ffmpeg prints N/A or a negative before the first packet
+}
+
 // UniqueDirPath returns parent/name, or parent/name (1), (2)... that does not exist yet.
 func UniqueDirPath(parent, name string) string {
 	p := filepath.Join(parent, name)
@@ -115,3 +125,8 @@ func countFrames(dir, ext string) int {
 }
 
 var errNoFrames = errors.New("tidak ada frame yang dihasilkan (video tanpa gambar?)")
+
+// ConvProgress is streamed while an audio conversion runs.
+type ConvProgress struct {
+	Percent float64 `json:"percent"` // 0..100
+}

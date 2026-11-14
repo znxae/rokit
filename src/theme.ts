@@ -1,7 +1,7 @@
 import { Rokit } from "./mygo";
 import { $ } from "./ui";
 
-export const CHOICES = ["auto", "apple", "dark", "material", "material-dark", "oled"] as const;
+export const CHOICES = ["auto", "apple", "dark", "material", "material-dark", "oled", "glass"] as const;
 export type Choice = (typeof CHOICES)[number];
 
 const KEY = "rokit.theme";

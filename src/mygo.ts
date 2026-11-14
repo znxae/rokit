@@ -4,6 +4,12 @@ import { call, type Channel } from "mygo-runtime";
 
 // ---- Types ----
 
+/** ConvProgress is streamed while an audio conversion runs. */
+export interface ConvProgress {
+  /** 0..100 */
+  percent: number;
+}
+
 /** DLOpts configure a video download. */
 export interface DLOpts {
   /** best | 1080 | 720 | 480 | 360 */
@@ -105,8 +111,8 @@ export const Rokit = {
     return call("Rokit.CheckTools");
   },
   /** Convert runs ffmpeg. A downloaded temp input is deleted after success. */
-  convert(input: string, output: string, o: Opts): Promise<void> {
-    return call("Rokit.Convert", input, output, o);
+  convert(input: string, output: string, o: Opts, progress: Channel<ConvProgress>): Promise<void> {
+    return call("Rokit.Convert", input, output, o, progress);
   },
   /** Download fetches the best audio of url with yt-dlp into a temp dir. */
   download(url: string): Promise<Downloaded> {
@@ -175,9 +181,9 @@ export const Rokit = {
   setTheme(name: string): Promise<void> {
     return call("Rokit.SetTheme", name);
   },
-  /** SuggestFramesDir is Downloads/<video name>, made unique so nothing is overwritten. */
-  suggestFramesDir(input: string): Promise<string> {
-    return call("Rokit.SuggestFramesDir", input);
+  /** SuggestFramesDir is <parent>/<video name> (parent "" = Downloads), made unique so nothing is overwritten. */
+  suggestFramesDir(input: string, parent: string): Promise<string> {
+    return call("Rokit.SuggestFramesDir", input, parent);
   },
   /**
    * SuggestOutput is the default output path for input in format: next to a local
