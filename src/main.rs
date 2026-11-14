@@ -425,4 +425,42 @@ mod tests {
         assert_eq!(speed_hint(0.5), "Untuk kembali normal: ubah speed ke 2.000x (lebih cepat)");
         assert_eq!(speed_hint(4.0), "Untuk kembali normal: ubah speed ke 0.250x (lebih lambat)");
     }
+
+    fn probe(path: &str, sel: &str) -> f64 {
+        let out = Command::new("ffprobe")
+            .args(["-v", "error", "-select_streams", "a:0", "-show_entries", sel, "-of", "csv=p=0", path])
+            .output()
+            .expect("ffprobe");
+        String::from_utf8_lossy(&out.stdout).trim().parse().unwrap_or_else(|_| panic!("probe {path}: {out:?}"))
+    }
+
+    /// Needs ffmpeg/ffprobe: `AE_TEST_INPUT=file cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn real_ffmpeg_pipeline() {
+        let input = std::env::var("AE_TEST_INPUT").expect("set AE_TEST_INPUT");
+        let dir = std::env::temp_dir().join("ae_pipeline");
+        std::fs::create_dir_all(&dir).unwrap();
+        let src = probe(&input, "format=duration");
+        let cases: [(&'static str, f64, f64, Channels, f64); 9] = [
+            ("mp3", 1.0, 0.0, Channels::Keep, 2.0),
+            ("wav", 1.0, 0.0, Channels::Keep, 2.0),
+            ("flac", 1.0, 0.0, Channels::Keep, 2.0),
+            ("ogg", 1.0, 0.0, Channels::Keep, 2.0),
+            ("m4a", 1.0, 0.0, Channels::Keep, 2.0),
+            ("opus", 1.0, 0.0, Channels::Keep, 2.0),
+            ("mp3", 0.25, 0.0, Channels::Keep, 2.0),
+            ("wav", 4.0, -6.0, Channels::Keep, 2.0),
+            ("mp3", 1.5, 3.0, Channels::Mono, 1.0),
+        ];
+        for (i, (fmt, speed, gain_db, ch, want_ch)) in cases.into_iter().enumerate() {
+            let out = dir.join(format!("case{i}.{fmt}")).to_string_lossy().into_owned();
+            let o = Opts { format: fmt, bitrate: 128, speed, gain_db, channels: ch };
+            run_ffmpeg(build_args(&input, &out, &o)).unwrap_or_else(|e| panic!("{fmt} x{speed}: {e}"));
+            let dur = probe(&out, "format=duration");
+            assert!((dur - src / speed).abs() < 0.4, "{fmt} x{speed}: duration {dur}, want {}", src / speed);
+            assert_eq!(probe(&out, "stream=channels"), want_ch, "{fmt} channels");
+            println!("ok {fmt} x{speed} {gain_db}dB -> {dur:.2}s");
+        }
+    }
 }
