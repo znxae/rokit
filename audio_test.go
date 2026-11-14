@@ -31,6 +31,17 @@ func TestCodecsPerFormat(t *testing.T) {
 	}
 }
 
+// Video inputs must yield audio only: -vn comes after -i and before the codec, for every format.
+func TestVideoInputDropsVideoStream(t *testing.T) {
+	for f := range codecs {
+		a := BuildArgs("clip.mp4", "o."+f, opts(f))
+		vn, in, codec := slices.Index(a, "-vn"), slices.Index(a, "-i"), slices.Index(a, "-c:a")
+		if vn < 0 || in < 0 || !(in < vn && vn < codec) {
+			t.Errorf("%s: bad -vn position in %v", f, a)
+		}
+	}
+}
+
 func TestBitrateOmittedForLossless(t *testing.T) {
 	for _, f := range []string{"wav", "flac"} {
 		if slices.Contains(BuildArgs("i", "o", opts(f)), "-b:a") {
