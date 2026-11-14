@@ -118,13 +118,91 @@ fn default_output(input: &Path, fmt: &str) -> PathBuf {
     p
 }
 
+const YTDLP_MSG: &str =
+    "yt-dlp was not found on PATH. Install it (Windows: `winget install yt-dlp.yt-dlp`), then restart this app.";
+
+/// Child processes must not flash a console window in the GUI build.
+fn cmd(name: &str) -> Command {
+    let mut c = Command::new(name);
+    #[cfg(windows)]
+    std::os::windows::process::CommandExt::creation_flags(&mut c, 0x0800_0000);
+    c
+}
+
+/// Only plain http(s) URLs without whitespace/control chars are handed to yt-dlp.
+fn valid_url(s: &str) -> bool {
+    let s = s.trim();
+    (s.starts_with("http://") || s.starts_with("https://"))
+        && s.len() > 8
+        && !s.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
+/// shortcut: Windows reserved names (CON, NUL, ...) are not special-cased; add if titles ever hit them.
+fn sanitize_filename(s: &str) -> String {
+    let c: String = s
+        .chars()
+        .map(|c| if c.is_control() || "<>:\"/\\|?*".contains(c) { '_' } else { c })
+        .collect();
+    let t: String = c.trim().trim_matches('.').chars().take(80).collect();
+    let t = t.trim().trim_end_matches('.').to_string();
+    if t.is_empty() { "audio".into() } else { t }
+}
+
+/// dir/stem.ext, or dir/stem (1).ext, (2)... so nothing existing is overwritten.
+fn unique_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
+    let p = dir.join(format!("{stem}.{ext}"));
+    if !p.exists() {
+        return p;
+    }
+    (1..)
+        .map(|n| dir.join(format!("{stem} ({n}).{ext}")))
+        .find(|c| !c.exists())
+        .unwrap()
+}
+
+fn downloads_dir() -> PathBuf {
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(|h| PathBuf::from(h).join("Downloads"))
+        .filter(|p| p.is_dir())
+        .unwrap_or_else(std::env::temp_dir)
+}
+
+/// Downloads best audio of `url` into a fresh temp dir; returns the file path.
+fn run_ytdlp(url: &str) -> Result<PathBuf, String> {
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let dir = std::env::temp_dir().join(format!("rokit_dl_{}_{}", std::process::id(), nanos));
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let template = format!("{}/%(title).80s.%(ext)s", dir.to_string_lossy());
+    let out = match cmd("yt-dlp")
+        .env("PYTHONIOENCODING", "utf-8")
+        .args(["-f", "bestaudio/best", "--no-playlist", "--no-simulate", "--windows-filenames", "-o", &template, "--print", "after_move:filepath", "--", url])
+        .output()
+    {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(YTDLP_MSG.into()),
+        Err(e) => return Err(format!("Could not start yt-dlp: {e}")),
+        Ok(o) => o,
+    };
+    if !out.status.success() {
+        let _ = std::fs::remove_dir_all(&dir);
+        return Err(String::from_utf8_lossy(&out.stderr).into_owned());
+    }
+    let printed = String::from_utf8_lossy(&out.stdout).lines().rev().find(|l| !l.trim().is_empty()).map(|l| PathBuf::from(l.trim()));
+    // Fall back to the dir's only file if the printed path was mangled by console encoding.
+    printed
+        .filter(|p| p.is_file())
+        .or_else(|| std::fs::read_dir(&dir).ok()?.flatten().map(|e| e.path()).find(|p| p.is_file()))
+        .ok_or_else(|| "yt-dlp finished but produced no file.".to_string())
+}
+
 enum Msg {
     FfmpegMissing,
+    Downloaded(Result<PathBuf, String>),
     Done(Result<(), String>),
 }
 
 fn run_ffmpeg(args: Vec<String>) -> Result<(), String> {
-    match Command::new("ffmpeg").args(&args).output() {
+    match cmd("ffmpeg").args(&args).output() {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(INSTALL_MSG.into()),
         Err(e) => Err(format!("Could not start ffmpeg: {e}")),
         Ok(out) if out.status.success() => Ok(()),
@@ -247,6 +325,9 @@ struct App {
     busy: bool,
     status: String,
     error: String,
+    url: String,
+    /// Downloaded file we own and delete after a successful convert.
+    temp_input: Option<PathBuf>,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
 }
@@ -258,7 +339,7 @@ impl App {
         // Early check so the install hint shows before the first conversion attempt.
         let (t, c) = (tx.clone(), ctx);
         std::thread::spawn(move || {
-            if Command::new("ffmpeg").arg("-version").output().is_err() {
+            if cmd("ffmpeg").arg("-version").output().is_err() {
                 let _ = t.send(Msg::FfmpegMissing);
                 c.request_repaint();
             }
@@ -270,9 +351,55 @@ impl App {
             busy: false,
             status: "Pick an input file.".into(),
             error: String::new(),
+            url: String::new(),
+            temp_input: None,
             tx,
             rx,
         }
+    }
+
+    fn remove_temp(&mut self) {
+        if let Some(p) = self.temp_input.take() {
+            let _ = std::fs::remove_file(&p);
+            if let Some(d) = p.parent() {
+                let _ = std::fs::remove_dir(d); // only succeeds when empty
+            }
+        }
+    }
+
+    fn set_local_input(&mut self, p: PathBuf) {
+        self.remove_temp();
+        self.output = default_output(&p, self.opts.format);
+        self.status = "Siap.".into();
+        self.input = Some(p);
+    }
+
+    /// Output name after a format change; downloaded files get a fresh unique name in Downloads.
+    fn refresh_output(&mut self) {
+        match (&self.temp_input, &self.input) {
+            (Some(_), Some(i)) => {
+                let stem = i.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+                self.output = unique_path(&downloads_dir(), &sanitize_filename(&stem), self.opts.format);
+            }
+            _ => {
+                self.output.set_extension(self.opts.format);
+            }
+        }
+    }
+
+    fn fetch(&mut self, ctx: &egui::Context) {
+        let url = self.url.trim().to_string();
+        if !valid_url(&url) {
+            return;
+        }
+        self.busy = true;
+        self.error.clear();
+        self.status = "Mengunduh…".into();
+        let (tx, ctx) = (self.tx.clone(), ctx.clone());
+        std::thread::spawn(move || {
+            let _ = tx.send(Msg::Downloaded(run_ytdlp(&url)));
+            ctx.request_repaint();
+        });
     }
 
     fn convert(&mut self, ctx: &egui::Context) {
@@ -298,10 +425,32 @@ impl eframe::App for App {
         while let Ok(m) = self.rx.try_recv() {
             match m {
                 Msg::FfmpegMissing => self.error = INSTALL_MSG.into(),
+                Msg::Downloaded(r) => {
+                    self.busy = false;
+                    match r {
+                        Ok(p) => {
+                            self.remove_temp();
+                            self.temp_input = Some(p.clone());
+                            self.input = Some(p);
+                            self.refresh_output();
+                            self.status = "Siap (unduhan selesai).".into();
+                        }
+                        Err(e) => {
+                            self.status = "Failed.".into();
+                            self.error = e;
+                        }
+                    }
+                }
                 Msg::Done(r) => {
                     self.busy = false;
                     match r {
-                        Ok(()) => self.status = format!("Done: {}", self.output.display()),
+                        Ok(()) => {
+                            self.status = format!("Done: {}", self.output.display());
+                            if self.temp_input.is_some() {
+                                self.remove_temp(); // temp download no longer needed
+                                self.input = None;
+                            }
+                        }
                         Err(e) => {
                             self.status = "Failed.".into();
                             self.error = e;
@@ -319,15 +468,17 @@ impl eframe::App for App {
                     let go = ui
                         .add_enabled_ui(self.input.is_some() && !self.busy, |ui| {
                             let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
-                            let fill = if !ui.is_enabled() {
-                                ACCENT.gamma_multiply(0.4)
+                            let on = ui.is_enabled();
+                            let fill = if !on {
+                                BORDER
                             } else if resp.hovered() {
                                 ACCENT_HOVER
                             } else {
                                 ACCENT
                             };
                             ui.painter().rect_filled(rect, Rounding::same(10.0), fill);
-                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "Convert", FontId::proportional(16.0), Color32::WHITE);
+                            let fg = if on { Color32::WHITE } else { MUTED };
+                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "Convert", FontId::proportional(16.0), fg);
                             resp.clicked()
                         })
                         .inner;
@@ -369,10 +520,22 @@ impl eframe::App for App {
                                     .add_filter("Audio/video", &["mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma", "mp4", "mkv", "webm"])
                                     .pick_file()
                                 {
-                                    self.output = default_output(&p, self.opts.format);
-                                    self.status = "Siap.".into();
-                                    self.input = Some(p);
+                                    self.set_local_input(p);
                                 }
+                            }
+                            ui.horizontal(|ui| {
+                                let w = (ui.available_width() - 90.0).max(80.0);
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut self.url)
+                                        .hint_text("atau tempel URL (YouTube, TikTok, …)")
+                                        .desired_width(w),
+                                );
+                                if ui.add_enabled(valid_url(&self.url), egui::Button::new("Ambil")).clicked() {
+                                    self.fetch(ctx);
+                                }
+                            });
+                            if !self.url.trim().is_empty() && !valid_url(&self.url) {
+                                ui.label(RichText::new("URL harus diawali http:// atau https://").size(13.0).color(ERROR));
                             }
                         });
                         card(ui, "Format & bitrate", |ui| {
@@ -384,7 +547,7 @@ impl eframe::App for App {
                                     .show_ui(&mut cols[0], |ui| {
                                         for f in FORMATS {
                                             if ui.selectable_value(&mut self.opts.format, f, f).clicked() && self.input.is_some() {
-                                                self.output.set_extension(f);
+                                                self.refresh_output();
                                             }
                                         }
                                     });
@@ -520,6 +683,37 @@ mod tests {
         assert_eq!(speed_hint(1.5), "Untuk kembali normal: ubah speed ke 0.667x (lebih lambat)");
         assert_eq!(speed_hint(0.5), "Untuk kembali normal: ubah speed ke 2.000x (lebih cepat)");
         assert_eq!(speed_hint(4.0), "Untuk kembali normal: ubah speed ke 0.250x (lebih lambat)");
+    }
+
+    #[test]
+    fn url_validation() {
+        assert!(valid_url("https://www.youtube.com/watch?v=abc"));
+        assert!(valid_url("  http://example.com/a  "));
+        for bad in ["", "https://", "ftp://x.com/a", "javascript:alert(1)", "https://a.com/x y", "file:///C:/a.mp3", "www.youtube.com", "-o evil"] {
+            assert!(!valid_url(bad), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn filename_sanitizing() {
+        assert_eq!(sanitize_filename("a<b>:c\"d/e\\f|g?h*i"), "a_b__c_d_e_f_g_h_i");
+        assert_eq!(sanitize_filename("  ..Title.. "), "Title");
+        assert_eq!(sanitize_filename("???"), "___");
+        assert_eq!(sanitize_filename("  . "), "audio");
+        assert_eq!(sanitize_filename(&"x".repeat(200)).len(), 80);
+        assert_eq!(sanitize_filename("tab\there"), "tab_here");
+    }
+
+    #[test]
+    fn unique_path_never_exists() {
+        let d = std::env::temp_dir().join(format!("ae_unique_{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        assert_eq!(unique_path(&d, "t", "mp3"), d.join("t.mp3"));
+        std::fs::write(d.join("t.mp3"), b"x").unwrap();
+        assert_eq!(unique_path(&d, "t", "mp3"), d.join("t (1).mp3"));
+        std::fs::write(d.join("t (1).mp3"), b"x").unwrap();
+        assert_eq!(unique_path(&d, "t", "mp3"), d.join("t (2).mp3"));
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     fn probe(path: &str, sel: &str) -> f64 {
