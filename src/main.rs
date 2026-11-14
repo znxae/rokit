@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use eframe::egui::{self, Color32, FontId, Margin, RichText, Rounding, Shadow, Stroke, TextStyle};
+use eframe::egui::{self, Align2, Color32, FontId, Margin, RichText, Rounding, Sense, Shadow, Shape, Stroke, TextStyle};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -10,16 +10,18 @@ const BITRATES: [u32; 7] = [64, 96, 128, 160, 192, 256, 320];
 const INSTALL_MSG: &str =
     "ffmpeg was not found on PATH. Install it (Windows: `winget install Gyan.FFmpeg`; macOS: `brew install ffmpeg`; Linux: your package manager), then restart this app.";
 
-// Material 3 dark palette.
-const BG: Color32 = Color32::from_rgb(0x1C, 0x1B, 0x1F);
-const CARD: Color32 = Color32::from_rgb(0x2B, 0x29, 0x30);
-const WIDGET: Color32 = Color32::from_rgb(0x36, 0x34, 0x3B);
-const WIDGET_HOVER: Color32 = Color32::from_rgb(0x41, 0x3E, 0x48);
-const OUTLINE: Color32 = Color32::from_rgb(0x49, 0x45, 0x4F);
-const TEXT: Color32 = Color32::from_rgb(0xE6, 0xE1, 0xE5);
-const PRIMARY: Color32 = Color32::from_rgb(0xD0, 0xBC, 0xFF);
-const ON_PRIMARY: Color32 = Color32::from_rgb(0x38, 0x1E, 0x72);
-const ERROR: Color32 = Color32::from_rgb(0xF2, 0xB8, 0xB5);
+// Light theme, single teal accent.
+const BG: Color32 = Color32::from_rgb(0xF4, 0xF6, 0xF8);
+const CARD: Color32 = Color32::WHITE;
+const CHIP: Color32 = Color32::from_rgb(0xF2, 0xF4, 0xF7);
+const BORDER: Color32 = Color32::from_rgb(0xE3, 0xE7, 0xEB);
+const TEXT: Color32 = Color32::from_rgb(0x10, 0x18, 0x28);
+const MUTED: Color32 = Color32::from_rgb(0x66, 0x70, 0x85);
+const ACCENT: Color32 = Color32::from_rgb(0x0F, 0x76, 0x6E);
+const ACCENT_HOVER: Color32 = Color32::from_rgb(0x11, 0x5E, 0x59);
+const ERROR: Color32 = Color32::from_rgb(0xB4, 0x23, 0x18);
+const OK: Color32 = Color32::from_rgb(0x06, 0x76, 0x47);
+
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Channels {
@@ -133,62 +135,106 @@ fn run_ffmpeg(args: Vec<String>) -> Result<(), String> {
 fn apply_style(ctx: &egui::Context) {
     let mut s = (*ctx.style()).clone();
     s.text_styles = [
-        (TextStyle::Heading, FontId::proportional(24.0)),
-        (TextStyle::Body, FontId::proportional(16.0)),
-        (TextStyle::Button, FontId::proportional(16.0)),
+        (TextStyle::Heading, FontId::proportional(22.0)),
+        (TextStyle::Body, FontId::proportional(15.0)),
+        (TextStyle::Button, FontId::proportional(15.0)),
         (TextStyle::Small, FontId::proportional(13.0)),
         (TextStyle::Monospace, FontId::monospace(14.0)),
     ]
     .into();
-    s.spacing.item_spacing = egui::vec2(10.0, 12.0);
-    s.spacing.button_padding = egui::vec2(16.0, 9.0);
-    s.spacing.interact_size.y = 36.0;
-    s.spacing.slider_width = 240.0;
+    s.spacing.item_spacing = egui::vec2(10.0, 10.0);
+    s.spacing.button_padding = egui::vec2(14.0, 8.0);
+    s.spacing.interact_size.y = 34.0;
     let v = &mut s.visuals;
-    *v = egui::Visuals::dark();
+    *v = egui::Visuals::light();
     v.override_text_color = Some(TEXT);
     v.panel_fill = BG;
     v.window_fill = CARD;
-    v.extreme_bg_color = WIDGET;
-    v.window_rounding = Rounding::same(16.0);
-    v.menu_rounding = Rounding::same(12.0);
-    v.popup_shadow = Shadow { offset: egui::vec2(0.0, 4.0), blur: 16.0, spread: 0.0, color: Color32::from_black_alpha(100) };
-    v.selection.bg_fill = PRIMARY;
-    v.selection.stroke = Stroke::new(1.0_f32, ON_PRIMARY);
-    let r = Rounding::same(12.0);
+    v.extreme_bg_color = CARD;
+    v.window_rounding = Rounding::same(14.0);
+    v.menu_rounding = Rounding::same(10.0);
+    v.window_shadow = Shadow { offset: egui::vec2(0.0, 2.0), blur: 8.0, spread: 0.0, color: Color32::from_black_alpha(20) };
+    v.popup_shadow = v.window_shadow;
+    v.slider_trailing_fill = true;
+    v.selection.bg_fill = ACCENT;
+    v.selection.stroke = Stroke::new(1.0_f32, Color32::WHITE);
     for (w, fill) in [
         (&mut v.widgets.noninteractive, CARD),
-        (&mut v.widgets.inactive, WIDGET),
-        (&mut v.widgets.hovered, WIDGET_HOVER),
-        (&mut v.widgets.active, WIDGET_HOVER),
-        (&mut v.widgets.open, WIDGET),
+        (&mut v.widgets.inactive, CARD),
+        (&mut v.widgets.hovered, CHIP),
+        (&mut v.widgets.active, CHIP),
+        (&mut v.widgets.open, CHIP),
     ] {
-        w.rounding = r;
+        w.rounding = Rounding::same(10.0);
         w.bg_fill = fill;
         w.weak_bg_fill = fill;
-        w.bg_stroke = Stroke::new(1.0_f32, OUTLINE);
+        w.bg_stroke = Stroke::new(1.0_f32, BORDER);
         w.fg_stroke = Stroke::new(1.0_f32, TEXT);
     }
-    v.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, PRIMARY);
-    v.widgets.active.bg_stroke = Stroke::new(1.5_f32, PRIMARY);
+    v.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, ACCENT);
+    v.widgets.active.bg_stroke = Stroke::new(1.5_f32, ACCENT);
     ctx.set_style(s);
 }
 
-/// A rounded, softly shadowed Material-style card with a section label.
+/// White rounded card with a very soft shadow and a small uppercase muted label.
 fn card(ui: &mut egui::Ui, title: &str, add: impl FnOnce(&mut egui::Ui)) {
     let w = ui.available_width();
     egui::Frame::none()
         .fill(CARD)
-        .rounding(Rounding::same(16.0))
-        .stroke(Stroke::new(1.0_f32, OUTLINE))
+        .rounding(Rounding::same(14.0))
+        .stroke(Stroke::new(1.0_f32, BORDER))
         .inner_margin(Margin::same(16.0))
-        .shadow(Shadow { offset: egui::vec2(0.0, 2.0), blur: 8.0, spread: 0.0, color: Color32::from_black_alpha(80) })
+        .shadow(Shadow { offset: egui::vec2(0.0, 1.0), blur: 3.0, spread: 0.0, color: Color32::from_black_alpha(14) })
         .show(ui, |ui| {
             ui.set_width(w - 34.0);
-            ui.label(RichText::new(title.to_uppercase()).size(12.0).strong().color(PRIMARY));
+            ui.label(RichText::new(title.to_uppercase()).size(13.0).color(MUTED));
             add(ui);
         });
 }
+
+fn chip(ui: &mut egui::Ui, text: String) {
+    egui::Frame::none()
+        .fill(CHIP)
+        .rounding(Rounding::same(8.0))
+        .inner_margin(Margin::symmetric(10.0, 4.0))
+        .show(ui, |ui| ui.label(RichText::new(text).strong()));
+}
+
+/// Dashed, clickable drop-zone style button; returns true when clicked.
+fn file_button(ui: &mut egui::Ui, name: Option<&str>) -> bool {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 72.0), Sense::click());
+    let hot = resp.hovered() && ui.is_enabled();
+    let color = if hot { ACCENT } else { BORDER };
+    ui.painter().rect_filled(rect, Rounding::same(10.0), if hot { CHIP } else { CARD });
+    let r = rect.shrink(0.5);
+    let pts = [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom(), r.left_top()];
+    ui.painter().extend(Shape::dashed_line(&pts, Stroke::new(1.5_f32, color), 6.0, 4.0));
+    let c = rect.center();
+    match name {
+        None => {
+            ui.painter().text(c, Align2::CENTER_CENTER, "Pilih file audio", FontId::proportional(16.0), ACCENT);
+        }
+        Some(n) => {
+            ui.painter().text(c - egui::vec2(0.0, 10.0), Align2::CENTER_CENTER, n, FontId::proportional(16.0), TEXT);
+            ui.painter().text(c + egui::vec2(0.0, 12.0), Align2::CENTER_CENTER, "Klik untuk mengganti file", FontId::proportional(13.0), MUTED);
+        }
+    }
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
+}
+
+/// One segment of a segmented control.
+fn segment(ui: &mut egui::Ui, cur: &mut Channels, val: Channels, label: &str) {
+    let sel = *cur == val;
+    let (fg, fill) = if sel { (Color32::WHITE, ACCENT) } else { (TEXT, CARD) };
+    let b = egui::Button::new(RichText::new(label).color(fg))
+        .fill(fill)
+        .stroke(Stroke::new(1.0_f32, if sel { ACCENT } else { BORDER }))
+        .min_size(egui::vec2(ui.available_width(), 36.0));
+    if ui.add(b).clicked() {
+        *cur = val;
+    }
+}
+
 
 struct App {
     input: Option<PathBuf>,
@@ -260,96 +306,137 @@ impl eframe::App for App {
                 }
             }
         }
+        // Single centered column, max 560px wide.
+        let pad = ((ctx.screen_rect().width() - 560.0) / 2.0).max(20.0);
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(BG).inner_margin(Margin::same(20.0)))
+            .frame(egui::Frame::none().fill(BG).inner_margin(Margin { left: pad, right: pad, top: 24.0, bottom: 24.0 }))
             .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.label(RichText::new("Audio Editor").heading().color(PRIMARY));
+                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 16.0;
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        ui.label(RichText::new("Rokit Audio Editor").heading().strong());
+                        ui.label(RichText::new("Konversi, ubah kecepatan, dan perkeras audio dengan ffmpeg").size(13.0).color(MUTED));
+                    });
                     ui.add_enabled_ui(!self.busy, |ui| {
-                        card(ui, "Input", |ui| {
-                            ui.horizontal(|ui| {
-                                if ui.button("Open file…").clicked() {
-                                    if let Some(p) = rfd::FileDialog::new()
-                                        .add_filter("Audio/video", &["mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma", "mp4", "mkv", "webm"])
-                                        .pick_file()
-                                    {
-                                        self.output = default_output(&p, self.opts.format);
-                                        self.status = "Ready.".into();
-                                        self.input = Some(p);
-                                    }
-                                }
-                                let name = self.input.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned());
-                                ui.label(name.unwrap_or_else(|| "(none)".into()));
-                            });
-                        });
-                        card(ui, "Format & bitrate", |ui| {
-                            egui::ComboBox::from_label("Format").selected_text(self.opts.format).show_ui(ui, |ui| {
-                                for f in FORMATS {
-                                    if ui.selectable_value(&mut self.opts.format, f, f).clicked() && self.input.is_some() {
-                                        self.output.set_extension(f);
-                                    }
-                                }
-                            });
-                            ui.add_enabled_ui(!is_lossless(self.opts.format), |ui| {
-                                egui::ComboBox::from_label("Bitrate")
-                                    .selected_text(format!("{} kbps", self.opts.bitrate))
-                                    .show_ui(ui, |ui| {
-                                        for b in BITRATES {
-                                            ui.selectable_value(&mut self.opts.bitrate, b, format!("{b} kbps"));
-                                        }
-                                    });
-                            });
-                        });
-                        card(ui, "Speed", |ui| {
-                            ui.add(egui::Slider::new(&mut self.opts.speed, 0.25..=4.0).text("×").step_by(0.05));
-                            ui.label(RichText::new(speed_hint(self.opts.speed)).small().color(PRIMARY));
-                        });
-                        card(ui, "Amplify", |ui| {
-                            ui.add(egui::Slider::new(&mut self.opts.gain_db, -20.0..=20.0).text("dB").step_by(0.5));
-                        });
-                        card(ui, "Channels", |ui| {
-                            ui.horizontal(|ui| {
-                                ui.radio_value(&mut self.opts.channels, Channels::Keep, "Keep");
-                                ui.radio_value(&mut self.opts.channels, Channels::Mono, "Mono");
-                                ui.radio_value(&mut self.opts.channels, Channels::Stereo, "Stereo");
-                            });
-                        });
-                        card(ui, "Output", |ui| {
-                            if ui.button("Save as…").clicked() && self.input.is_some() {
+                        card(ui, "File input", |ui| {
+                            let name = self.input.as_ref().and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned());
+                            if file_button(ui, name.as_deref()) {
                                 if let Some(p) = rfd::FileDialog::new()
-                                    .set_file_name(self.output.file_name().unwrap_or_default().to_string_lossy())
-                                    .save_file()
+                                    .add_filter("Audio/video", &["mp3", "wav", "flac", "ogg", "m4a", "opus", "aac", "wma", "mp4", "mkv", "webm"])
+                                    .pick_file()
                                 {
-                                    self.output = p;
+                                    self.output = default_output(&p, self.opts.format);
+                                    self.status = "Siap.".into();
+                                    self.input = Some(p);
                                 }
                             }
-                            ui.label(self.output.display().to_string());
                         });
-                        let btn = egui::Button::new(RichText::new("Convert").size(18.0).strong().color(ON_PRIMARY))
-                            .fill(PRIMARY)
-                            .rounding(Rounding::same(24.0))
-                            .min_size(egui::vec2(ui.available_width(), 48.0));
-                        if ui.add_enabled(self.input.is_some(), btn).clicked() {
-                            self.convert(ctx);
-                        }
+                        card(ui, "Format & bitrate", |ui| {
+                            ui.columns(2, |cols| {
+                                cols[0].label(RichText::new("Format").size(13.0).color(MUTED));
+                                egui::ComboBox::from_id_salt("fmt")
+                                    .width(cols[0].available_width())
+                                    .selected_text(self.opts.format)
+                                    .show_ui(&mut cols[0], |ui| {
+                                        for f in FORMATS {
+                                            if ui.selectable_value(&mut self.opts.format, f, f).clicked() && self.input.is_some() {
+                                                self.output.set_extension(f);
+                                            }
+                                        }
+                                    });
+                                cols[1].label(RichText::new("Bitrate").size(13.0).color(MUTED));
+                                cols[1].add_enabled_ui(!is_lossless(self.opts.format), |ui| {
+                                    egui::ComboBox::from_id_salt("br")
+                                        .width(ui.available_width())
+                                        .selected_text(format!("{} kbps", self.opts.bitrate))
+                                        .show_ui(ui, |ui| {
+                                            for b in BITRATES {
+                                                ui.selectable_value(&mut self.opts.bitrate, b, format!("{b} kbps"));
+                                            }
+                                        });
+                                });
+                            });
+                        });
+                        card(ui, "Kecepatan", |ui| {
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().slider_width = (ui.available_width() - 90.0).max(80.0);
+                                ui.add(egui::Slider::new(&mut self.opts.speed, 0.25..=4.0).show_value(false).step_by(0.05));
+                                chip(ui, format!("{:.2}×", self.opts.speed));
+                            });
+                            ui.label(RichText::new(speed_hint(self.opts.speed)).size(13.0).color(MUTED));
+                        });
+                        card(ui, "Perkeras suara", |ui| {
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().slider_width = (ui.available_width() - 90.0).max(80.0);
+                                ui.add(egui::Slider::new(&mut self.opts.gain_db, -20.0..=20.0).show_value(false).step_by(0.5));
+                                chip(ui, format!("{:+.1} dB", self.opts.gain_db));
+                            });
+                        });
+                        card(ui, "Channel", |ui| {
+                            ui.columns(3, |c| {
+                                segment(&mut c[0], &mut self.opts.channels, Channels::Keep, "Asli");
+                                segment(&mut c[1], &mut self.opts.channels, Channels::Mono, "Mono");
+                                segment(&mut c[2], &mut self.opts.channels, Channels::Stereo, "Stereo");
+                            });
+                        });
+                        card(ui, "File output", |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                if ui.button("Simpan sebagai…").clicked() && self.input.is_some() {
+                                    if let Some(p) = rfd::FileDialog::new()
+                                        .set_file_name(self.output.file_name().unwrap_or_default().to_string_lossy())
+                                        .save_file()
+                                    {
+                                        self.output = p;
+                                    }
+                                }
+                                ui.label(RichText::new(self.output.display().to_string()).size(13.0).color(MUTED));
+                            });
+                        });
                     });
+                    let go = ui
+                        .add_enabled_ui(self.input.is_some() && !self.busy, |ui| {
+                            let (rect, resp) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 44.0), Sense::click());
+                            let fill = if !ui.is_enabled() {
+                                ACCENT.gamma_multiply(0.4)
+                            } else if resp.hovered() {
+                                ACCENT_HOVER
+                            } else {
+                                ACCENT
+                            };
+                            ui.painter().rect_filled(rect, Rounding::same(10.0), fill);
+                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "Convert", FontId::proportional(16.0), Color32::WHITE);
+                            resp.clicked()
+                        })
+                        .inner;
+                    if go {
+                        self.convert(ctx);
+                    }
                     ui.horizontal(|ui| {
-                        ui.label(&self.status);
+                        let color = if self.status.starts_with("Done") {
+                            OK
+                        } else if self.status == "Failed." {
+                            ERROR
+                        } else {
+                            MUTED
+                        };
+                        ui.label(RichText::new(&self.status).color(color));
                         if self.busy {
                             ui.spinner();
                         }
                     });
                     if !self.error.is_empty() {
-                        ui.colored_label(ERROR, &self.error);
+                        ui.label(RichText::new(&self.error).color(ERROR));
                     }
                 });
             });
     }
 }
 
+
 fn main() -> eframe::Result {
     let opts = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([520.0, 900.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([620.0, 900.0]),
         ..Default::default()
     };
     eframe::run_native("Audio Editor", opts, Box::new(|cc| Ok(Box::new(App::new(cc.egui_ctx.clone())))))
