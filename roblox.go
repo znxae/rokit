@@ -235,3 +235,78 @@ func RobloxFileStem(id int64, name string) string {
 	}
 	return fmt.Sprintf("%d-%s", id, strings.TrimSpace(string(n)))
 }
+
+var (
+	contentRe   = regexp.MustCompile(`<Content name="([A-Za-z]+)">\s*<url>([^<]*)</url>`)
+	contentIDRe = regexp.MustCompile(`(?:[?&]id=|rbxassetid://)([0-9]{1,16})`)
+)
+
+// wrapperField is the property of a wrapper asset's XML that points at its image.
+var wrapperField = map[int]string{13: "Texture", 18: "Texture", 11: "ShirtTemplate", 12: "PantsTemplate", 2: "Graphic"}
+
+// IsWrapperType says whether an asset type is a thin XML wrapper around an image (Decal, Face, Shirt, Pants, T-Shirt).
+func IsWrapperType(typeID int) bool { _, ok := wrapperField[typeID]; return ok }
+
+// ParseWrapperImage finds the image asset ID a Decal, Face, Shirt, Pants or T-Shirt points at,
+// reading only its public asset-delivery XML.
+func ParseWrapperImage(typeID int, xml []byte) (int64, bool) {
+	want, ok := wrapperField[typeID]
+	if !ok {
+		return 0, false
+	}
+	for _, m := range contentRe.FindAllSubmatch(xml, -1) {
+		if string(m[1]) != want {
+			continue
+		}
+		if id := contentIDRe.FindSubmatch(m[2]); id != nil {
+			if n, err := positiveID(string(id[1])); err == nil {
+				return n, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// StatusError maps an HTTP status from a Roblox host to the message the page shows (nil for 200).
+func StatusError(code int) error {
+	switch {
+	case code == 200:
+		return nil
+	case code == 429:
+		return errors.New(msgRobloxRate)
+	case code == 401 || code == 403:
+		return errors.New(msgRobloxPriv)
+	case code == 404:
+		return errors.New(msgRobloxGone)
+	}
+	return fmt.Errorf("Roblox menjawab HTTP %d", code)
+}
+
+// MaxBatch is the most assets one list may hold.
+const MaxBatch = 50
+
+// SplitAssetList turns the pasted text (one ID or URL per line) into trimmed, non-empty lines.
+func SplitAssetList(text string) ([]string, error) {
+	var out []string
+	for _, l := range strings.FieldsFunc(text, func(r rune) bool { return r == '\n' }) {
+		if l = strings.TrimSpace(l); l != "" {
+			out = append(out, l)
+		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("daftar kosong: tulis satu ID atau URL per baris")
+	}
+	if len(out) > MaxBatch {
+		return nil, fmt.Errorf("terlalu banyak: %d baris, maksimal %d", len(out), MaxBatch)
+	}
+	return out, nil
+}
+
+// BatchItem is the state of one line of "Unduh semua".
+type BatchItem struct {
+	Index   int    `json:"index"`
+	Input   string `json:"input"`
+	Status  string `json:"status"` // menunggu | jalan | selesai | gagal | dilewati
+	Message string `json:"message"`
+	Path    string `json:"path"`
+}

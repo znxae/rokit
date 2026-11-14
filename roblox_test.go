@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseAssetRef(t *testing.T) {
@@ -181,5 +185,143 @@ func TestLiveRoblox(t *testing.T) {
 	}
 	if _, err := r.RobloxDownload(t.Context(), "1818"); err == nil || err.Error() != msgRobloxPriv {
 		t.Errorf("private asset: %v", err)
+	}
+}
+
+func TestParseWrapperImage(t *testing.T) {
+	decal := `<roblox xmlns:xmime="x"><Item class="Decal" referent="RBX0"><Properties><Content name="Texture"><url>http://www.roblox.com/asset/?id=157042876</url></Content></Properties></Item></roblox>`
+	shirt := `<roblox><Item class="Shirt"><Properties><Content name="ShirtTemplate"><url>http://www.roblox.com/asset/?id=144076357</url></Content><string name="Name">S</string></Properties></Item></roblox>`
+	pants := `<roblox><Item class="Pants"><Properties><Content name="PantsTemplate"><url>rbxassetid://99</url></Content></Properties></Item></roblox>`
+	hat := `<roblox><Content name="MeshId"><url>http://www.roblox.com/asset/?id=1</url></Content><Content name="TextureId"><url>http://www.roblox.com/asset/?id=2</url></Content></roblox>`
+	for _, c := range []struct {
+		ty   int
+		xml  string
+		want int64
+		ok   bool
+	}{
+		{13, decal, 157042876, true}, {18, decal, 157042876, true}, {11, shirt, 144076357, true}, {12, pants, 99, true},
+		{11, decal, 0, false},               // a Shirt looks for ShirtTemplate, not Texture
+		{13, `<roblox></roblox>`, 0, false}, // no reference
+		{13, `<roblox><Content name="Texture"><url>http://evil.com/x</url></Content></roblox>`, 0, false},
+		{10, hat, 0, false}, // models are not wrappers
+		{13, `<roblox><Content name="Texture"><url>http://www.roblox.com/asset/?id=abc</url></Content></roblox>`, 0, false},
+	} {
+		got, ok := ParseWrapperImage(c.ty, []byte(c.xml))
+		if ok != c.ok || got != c.want {
+			t.Errorf("type %d: got %d,%v want %d,%v", c.ty, got, ok, c.want, c.ok)
+		}
+	}
+}
+
+func TestStatusError429AndFriends(t *testing.T) {
+	for code, want := range map[int]string{429: msgRobloxRate, 401: msgRobloxPriv, 403: msgRobloxPriv, 404: msgRobloxGone, 500: "Roblox menjawab HTTP 500", 302: "Roblox menjawab HTTP 302"} {
+		if err := StatusError(code); err == nil || err.Error() != want {
+			t.Errorf("StatusError(%d) = %v, want %q", code, err, want)
+		}
+	}
+	if StatusError(200) != nil {
+		t.Error("200 must pass")
+	}
+}
+
+// A real HTTP exchange against a local server: 429 shows the rate-limit message, with no credentials sent.
+func TestRobloxGetHandlesStatuses(t *testing.T) {
+	var gotUA, gotAuth, gotCookie string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA, gotAuth, gotCookie = r.Header.Get("User-Agent"), r.Header.Get("Authorization"), r.Header.Get("Cookie")
+		switch r.URL.Path {
+		case "/ok":
+			w.Write([]byte(`{"a":1}`))
+		case "/rate":
+			w.Header().Set("Retry-After", "30")
+			w.WriteHeader(http.StatusTooManyRequests)
+		case "/auth":
+			w.WriteHeader(http.StatusUnauthorized)
+		case "/redir":
+			http.Redirect(w, r, "https://evil.example/x", http.StatusFound)
+		}
+	}))
+	defer srv.Close()
+	ctx := t.Context()
+	if b, err := robloxGet(ctx, srv.URL+"/ok"); err != nil || string(b) != `{"a":1}` {
+		t.Errorf("ok: %q %v", b, err)
+	}
+	if gotUA != robloxUA || gotAuth != "" || gotCookie != "" {
+		t.Errorf("headers: UA=%q auth=%q cookie=%q", gotUA, gotAuth, gotCookie)
+	}
+	for path, want := range map[string]string{"/rate": msgRobloxRate, "/auth": msgRobloxPriv, "/redir": "Roblox menjawab HTTP 302"} {
+		if _, err := robloxGet(ctx, srv.URL+path); err == nil || err.Error() != want {
+			t.Errorf("%s: %v, want %q", path, err, want)
+		}
+	}
+}
+
+func TestPacerSpacesRequests(t *testing.T) {
+	ctx := withPace(t.Context(), 120*time.Millisecond)
+	start := time.Now()
+	for i := 0; i < 3; i++ {
+		if err := paceWait(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if d := time.Since(start); d < 230*time.Millisecond {
+		t.Errorf("3 requests took %v, want at least 2 gaps", d)
+	}
+	start = time.Now()
+	for i := 0; i < 3; i++ {
+		_ = paceWait(t.Context()) // no pacer: never waits
+	}
+	if time.Since(start) > 50*time.Millisecond {
+		t.Error("unpaced requests waited")
+	}
+	cctx, cancel := context.WithCancel(withPace(t.Context(), time.Hour))
+	_ = paceWait(cctx)
+	cancel()
+	if err := paceWait(cctx); err == nil {
+		t.Error("a cancelled wait must return")
+	}
+}
+
+func TestSplitAssetList(t *testing.T) {
+	got, err := SplitAssetList("  1837879082 \r\n\r\nhttps://www.roblox.com/library/5/x\n\n rbxassetid://7 ")
+	if err != nil || len(got) != 3 || got[0] != "1837879082" || got[2] != "rbxassetid://7" {
+		t.Errorf("got %q %v", got, err)
+	}
+	if _, err := SplitAssetList("  \n \n"); err == nil {
+		t.Error("empty list accepted")
+	}
+	fifty := strings.TrimSpace(strings.Repeat("1\n", MaxBatch))
+	if got, err := SplitAssetList(fifty); err != nil || len(got) != MaxBatch {
+		t.Errorf("50 lines: %d %v", len(got), err)
+	}
+	if _, err := SplitAssetList(fifty + "\n2"); err == nil || !strings.Contains(err.Error(), "maksimal 50") {
+		t.Errorf("51 lines: %v", err)
+	}
+}
+
+// Live per-type check; prints a table. Run: ROKIT_LIVE=1 go test -run TestLiveTypes -v
+func TestLiveTypes(t *testing.T) {
+	if os.Getenv("ROKIT_LIVE") == "" {
+		t.Skip("set ROKIT_LIVE=1 to call the real Roblox endpoints")
+	}
+	home := t.TempDir()
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("HOME", home)
+	ctx := withPace(t.Context(), 700*time.Millisecond)
+	for _, c := range []struct {
+		label string
+		id    int64
+	}{
+		{"Audio 1837879082", 1837879082}, {"Image 7229442422", 7229442422}, {"Decal 157042877 (public)", 157042877},
+		{"Decal 176217906 (login)", 176217906}, {"Mesh 1028604", 1028604}, {"Shirt 144076358", 144076358},
+		{"Hat 1028606", 1028606}, {"Place 1818", 1818}, {"Missing 130", 130},
+	} {
+		s, err := robloxFetch(ctx, c.id, 0)
+		if err != nil {
+			t.Logf("%-26s -> %v", c.label, err)
+			continue
+		}
+		fi, _ := os.Stat(s.Path)
+		t.Logf("%-26s -> OK .%s %d bytes raw=%v via=%q", c.label, s.Ext, fi.Size(), s.Raw, s.Via)
 	}
 }

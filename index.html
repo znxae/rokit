@@ -304,9 +304,9 @@
         </div>
         <!-- ================= Aset Roblox ================= -->
         <div class="tab" id="tab-roblox">
-          <header class="toolbar"><span></span><h1>Aset Roblox</h1><div class="tb-slot"></div></header>
+          <header class="toolbar"><span></span><h1>Aset Roblox</h1><div class="tb-slot"><div class="seg" id="r-mode" role="radiogroup" aria-label="Mode"><button type="button" class="on" data-v="one">Satu aset</button><button type="button" data-v="many">Daftar</button></div></div></header>
           <div class="scroll">
-            <section>
+            <section id="r-single">
               <div class="group">
                 <form class="urlrow in" id="r-form">
                   <input class="field" id="r-url" type="text" placeholder="Tempel URL aset Roblox atau ID (mis. 1837879082)" aria-label="URL atau ID aset" autocomplete="off" spellcheck="false" />
@@ -328,6 +328,13 @@
               </div>
               <p class="legal">Unduh hanya aset milik Anda atau yang lisensinya mengizinkan; patuhi Ketentuan Layanan Roblox.</p>
             </section>
+            <section id="r-batch" hidden>
+              <div class="group">
+                <div class="batchin"><textarea class="field area" id="r-list" rows="5" placeholder="Satu ID atau URL per baris (maksimal 50)" aria-label="Daftar aset" spellcheck="false"></textarea></div>
+                <ul class="items" id="r-items" aria-live="polite"></ul>
+              </div>
+              <p class="legal">Maksimal 50 aset, berurutan, 1 permintaan per detik. Aset yang butuh login dilewati dengan pesan jelas. Unduh hanya aset milik Anda atau yang lisensinya mengizinkan; patuhi Ketentuan Layanan Roblox.</p>
+            </section>
             <section>
               <div class="group">
                 <div class="row">
@@ -345,6 +352,7 @@
             <div class="actions">
               <button class="btn" id="r-open" type="button" hidden>Buka folder</button>
               <button class="btn" id="r-audio" type="button" hidden>Buka di tab Audio</button>
+              <button class="btn stop" id="r-stop" type="button" hidden>Batal</button>
               <button class="btn primary" id="r-go" type="button" disabled>Unduh</button>
             </div>
           </footer>

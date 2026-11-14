@@ -1,6 +1,7 @@
-import { Rokit, type AssetMeta, type RobloxSaved } from "./mygo";
+import { Channel } from "mygo-runtime";
+import { Rokit, type AssetMeta, type BatchItem, type RobloxSaved } from "./mygo";
 import { loadAudioFile } from "./audio";
-import { $, dirName, errText, setStatus, showError, showTab } from "./ui";
+import { $, dirName, errText, segmented, segValue, setProgress, setSegDisabled, setStatus, showError, showTab } from "./ui";
 
 // Lucide icons per kind; constant markup, no user data.
 const ICON = (d: string) =>
@@ -22,17 +23,35 @@ export function initRoblox() {
   const status = $("#r-status", tab);
   const error = $("#r-error", tab);
 
+  const mode = $("#r-mode");
+  const single = $("#r-single", tab);
+  const batch = $("#r-batch", tab);
+  const list = $<HTMLTextAreaElement>("#r-list", tab);
+  const items = $("#r-items", tab);
+  const stop = $<HTMLButtonElement>("#r-stop", tab);
+  const many = () => segValue(mode) === "many";
+  let batchProgress: Channel<BatchItem> | null = null;
+  let cancelled = false;
+  let batchDir = "";
+
   let busy = false;
   let meta: AssetMeta | null = null;
   let saved: RobloxSaved | null = null;
 
   function render() {
+    single.hidden = many();
+    batch.hidden = !many();
+    setSegDisabled(mode, busy);
     input.disabled = busy;
-    const has = input.value.trim() !== "";
-    check.disabled = busy || !has;
-    go.disabled = busy || !has || !!meta?.blocked;
-    openBtn.hidden = busy || !saved;
-    audioBtn.hidden = busy || !saved?.isAudio;
+    list.disabled = busy;
+    const has = many() ? list.value.trim() !== "" : input.value.trim() !== "";
+    check.disabled = busy || !input.value.trim();
+    go.textContent = many() ? "Unduh semua" : "Unduh";
+    go.hidden = busy && many();
+    stop.hidden = !(busy && many());
+    go.disabled = busy || !has || (!many() && !!meta?.blocked);
+    openBtn.hidden = busy || !(many() ? batchDir : saved);
+    audioBtn.hidden = busy || many() || !saved?.isAudio;
   }
 
   /** What was checked or saved no longer matches the field. */
@@ -90,7 +109,7 @@ export function initRoblox() {
   });
 
   go.addEventListener("click", () =>
-    void guarded("Mengunduh…", async () => {
+    many() ? undefined : void guarded("Mengunduh…", async () => {
       const s = await Rokit.robloxDownload(input.value);
       saved = s;
       out.textContent = s.path;
@@ -100,7 +119,7 @@ export function initRoblox() {
     }),
   );
 
-  openBtn.addEventListener("click", () => saved && void Rokit.openFolder(dirName(saved.path)).catch((e) => showError(error, errText(e))));
+  openBtn.addEventListener("click", () => !many() && saved && void Rokit.openFolder(dirName(saved.path)).catch((e) => showError(error, errText(e))));
   audioBtn.addEventListener("click", async () => {
     if (!saved?.isAudio) return;
     try {
@@ -109,6 +128,72 @@ export function initRoblox() {
     } catch (e) {
       showError(error, errText(e));
     }
+  });
+
+    // ---- Daftar: many assets, one at a time ----
+  segmented(mode, () => {
+    showError(error, "");
+    setStatus(status, "", many() ? "Tempel daftar ID atau URL, satu per baris." : "Tempel URL atau ID aset, lalu klik Cek.");
+    render();
+  });
+  list.addEventListener("input", () => {
+    batchDir = "";
+    render();
+  });
+
+  function paint(it: BatchItem) {
+    let li = items.children[it.index] as HTMLLIElement | undefined;
+    if (!li) {
+      li = document.createElement("li");
+      li.innerHTML = '<span class="in"></span><span class="st"></span>'; // constant markup
+      items.append(li);
+    }
+    li.className = it.status;
+    li.querySelector(".in")!.textContent = it.input;
+    li.querySelector(".st")!.textContent = it.message ? `${it.status} — ${it.message}` : it.status;
+  }
+
+  async function runMany() {
+    items.replaceChildren();
+    batchDir = "";
+    cancelled = false;
+    busy = true;
+    showError(error, "");
+    render();
+    let total = 0;
+    let done = 0;
+    batchProgress = new Channel<BatchItem>((it) => {
+      paint(it);
+      total = Math.max(total, it.index + 1);
+      if (it.status !== "menunggu" && it.status !== "jalan") done = Math.max(done, it.index + 1);
+      setProgress(status, total ? (done / total) * 100 : 0, `Mengunduh… ${done} / ${total}`, "");
+    });
+    setProgress(status, 0, "Mengunduh…", "");
+    try {
+      const res = await Rokit.robloxDownloadMany(list.value, batchProgress);
+      const ok = res.filter((i) => i.status === "selesai");
+      const bad = res.filter((i) => i.status === "gagal").length;
+      const skipped = res.filter((i) => i.status === "dilewati").length;
+      if (ok[0]) batchDir = dirName(ok[0].path);
+      setStatus(status, ok.length ? "ok" : "fail", `${cancelled ? "Dibatalkan — " : "Selesai — "}${ok.length} berhasil, ${bad} gagal${skipped ? `, ${skipped} dilewati` : ""}`);
+    } catch (e) {
+      setStatus(status, "fail", "Gagal.");
+      showError(error, errText(e));
+    } finally {
+      batchProgress = null;
+      busy = false;
+      render();
+    }
+  }
+  stop.addEventListener("click", () => {
+    cancelled = true;
+    batchProgress?.close();
+  });
+  go.addEventListener("click", () => {
+    if (many()) void runMany();
+  });
+  openBtn.addEventListener("click", () => {
+    if (many() && batchDir) void Rokit.openFolder(batchDir).catch((e) => showError(error, errText(e)));
   });
 
   render();

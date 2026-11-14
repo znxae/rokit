@@ -19,6 +19,16 @@ export interface AssetMeta {
   blocked: string;
 }
 
+/** BatchItem is the state of one line of "Unduh semua". */
+export interface BatchItem {
+  index: number;
+  input: string;
+  /** menunggu | jalan | selesai | gagal | dilewati */
+  status: string;
+  message: string;
+  path: string;
+}
+
 /** ConvProgress is streamed while an audio conversion runs. */
 export interface ConvProgress {
   /** 0..100 */
@@ -94,6 +104,8 @@ export interface RobloxSaved {
   /** can be opened in the Audio tab */
   isAudio: boolean;
   note: string;
+  /** "Decal -> gambar ID 123" when a wrapper was resolved to its image */
+  via: string;
 }
 
 /** Saved is the finished download. */
@@ -211,11 +223,19 @@ export const Rokit = {
     return call("Rokit.RobloxCheck", input);
   },
   /**
-   * RobloxDownload saves the raw asset to Downloads/Rokit-Roblox/<id>-<name>.<ext>, never overwriting.
+   * RobloxDownload saves the asset to Downloads/Rokit-Roblox/<id>-<name>.<ext>, never overwriting.
+   * A Decal, Face, Shirt, Pants or T-Shirt is a public XML wrapper: the image it points at is fetched instead.
    * Private, age-gated or removed assets stop with a message; nothing tries to get around that.
    */
   robloxDownload(input: string): Promise<RobloxSaved> {
     return call("Rokit.RobloxDownload", input);
+  },
+  /**
+   * RobloxDownloadMany downloads a pasted list, one line at a time, one request per second, and streams
+   * each item's state. Items that need a login are marked "gagal" and the run goes on; a 429 stops it.
+   */
+  robloxDownloadMany(text: string, progress: Channel<BatchItem>): Promise<BatchItem[]> {
+    return call("Rokit.RobloxDownloadMany", text, progress);
   },
   /** SetTheme saves the theme; unknown names are rejected. */
   setTheme(name: string): Promise<void> {
