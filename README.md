@@ -12,6 +12,7 @@ The Rust/egui version of the audio editor lives on the `main` branch.
 | Video ke Gambar | PNG or JPG frames (JPG quality 1–100), 0.5–60 fps or every frame, into a new folder (never overwrites). Cancel removes the partial folder. |
 | Unduh Video | One video via yt-dlp: best/1080/720/480/360, mp4 or as-is, saved to Downloads under its title. |
 | Aset Roblox | Anonymous check and download of a Roblox asset, or a pasted list. See below. |
+| Pakaian Klasik | 3D preview of Roblox Classic Shirt/Pants PNGs on an R6 avatar. See below. |
 
 Themes (picker in the sidebar, saved in `%APPDATA%\Rokit\settings.json`): Otomatis, Apple Terang, Gelap, Material Terang, Material Gelap, OLED, Kaca.
 
@@ -47,6 +48,18 @@ Paste an asset **ID**, `rbxassetid://ID`, or a URL on `roblox.com`, `www.roblox.
 
 What works without login (checked live): Audio, Image, Mesh, public Decals, Shirt/Pants templates, Hats and accessories.
 Many Decals, Images, Models and Places answer 401/403/409 and cannot be downloaded without login.
+
+## Pakaian Klasik
+
+Preview a Classic Shirt and/or Pants image (PNG, exactly 585x559, up to 4 MB) on a 3D R6 avatar, both layers at once. Drag a PNG onto a box or use *Pilih gambar*; wrong files are refused with a reason (`ukuran harus 585x559, gambar Anda WxH`). Drag to rotate, scroll to zoom; options: template lines on the avatar, auto-rotate, background (theme / checker / transparent), *Simpan gambar preview*. *Unduh template panduan* saves our own labelled guide (drawn by the app, not Roblox's image). Files go to `Downloads\Rokit-Pakaian`, never overwriting.
+
+- **Avatar kita**: a username or user ID is looked up with public endpoints (`users.roblox.com`, `avatar.roblox.com`, no cookie) and its body colors are applied; *Avatar saya* uses the logged-in account's ID, still without sending the cookie. Empty = a neutral default avatar with our own face. The preview always uses the **R6 shape**, even for R15 users.
+- **Layout source**: the 585x559 regions were measured from Roblox's published Classic Clothing template (analysis only, the template is not shipped) and match the size table in the Creator docs: 128x128 front/back, 64x128 sides, 128x64 top/bottom, 64x64 arm/leg ends. Pants use the same layout. Shirt covers torso and arms, pants the legs and lower torso; transparent pixels show the body color. Orientation was checked with a labelled test image on all four sides. The table and the PNG checks have tests (`npm run test:ts`, `go test ./...`).
+- **three.js** 0.187.0 (MIT) is a pinned npm dependency bundled into the page; no CDN, works offline. Textures use linear filtering; how closely that matches Roblox's own rendering is unverified.
+- **Not included**: uploading to Roblox. *Buka halaman unggah Roblox* only opens `create.roblox.com` in your browser; uploading needs your account, a fee and your decision. Hats/accessories (v2) are not drawn; `mesh.go` could be reused for that.
+
+![Pakaian Klasik tab](docs/clothing-tab.png)
+![Sample shirt and pants on the default avatar and on an avatar with Roblox's colors](docs/clothing-preview.png)
 
 ## Requirements
 

@@ -5,6 +5,7 @@ import { initAudio } from "./audio";
 import { initRoblox } from "./roblox";
 import { initDownload } from "./download";
 import { initFrames } from "./frames";
+import { initClothing } from "./clothing";
 import { initTheme } from "./theme";
 import { $, errText, showTab } from "./ui";
 
@@ -58,5 +59,6 @@ void initTheme();
 initAudio();
 initFrames();
 initDownload();
+initClothing();
 initRoblox();
 void checkTools();

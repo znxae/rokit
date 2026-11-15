@@ -8,12 +8,15 @@
     "generate": "mygo generate",
     "dev:web": "vite",
     "build:web": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ts": "node --test tests/clothing_uv.test.ts"
   },
   "dependencies": {
-    "mygo-runtime": "^0.9.0"
+    "mygo-runtime": "^0.9.0",
+    "three": "0.187.0"
   },
   "devDependencies": {
+    "@types/three": "0.187.0",
     "mygo-cli": "^0.9.0",
     "typescript": "^7",
     "vite": "^8"

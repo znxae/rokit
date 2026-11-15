@@ -265,3 +265,27 @@ dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 }
 
 [hidden] { display: none !important; }
+
+/* ---- Pakaian Klasik ---- */
+.cloth { display: grid; grid-template-columns: 372px minmax(0, 1fr); gap: 16px; padding: 8px 24px 16px; flex: 1; min-height: 0; }
+.cloth-ctl { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; padding-right: 2px; }
+.cloth .drop { display: flex; align-items: center; gap: 12px; padding: 12px var(--row-px); border-top: 1px solid var(--sep); }
+.cloth .drop:first-child { border-top: 0; }
+.cloth .drop.over { background: var(--sel-bg); }
+.cloth .thumb { width: 52px; height: 50px; border-radius: 6px; border: 1px dashed var(--drop-border); flex: none; background: repeating-conic-gradient(var(--sep) 0 25%, transparent 0 50%) 0 0 / 10px 10px; }
+.cloth .thumb.has { border-style: solid; }
+.cloth .dn { flex: 1; min-width: 0; font-size: 14px; }
+.cloth .dn small { display: block; color: var(--sec); font-size: 12px; overflow-wrap: anywhere; }
+.cloth .mini { display: flex; gap: 8px; padding: 12px var(--row-px); border-top: 1px solid var(--sep); flex-wrap: wrap; }
+.cloth .err { margin: 0; color: var(--err); font-size: 13px; padding: 0 var(--row-px) 12px; }
+.cloth .legal { margin: 0 0 0 4px; }
+.linkbtn { all: unset; color: var(--accent-text); cursor: pointer; text-decoration: underline; }
+.linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cloth-view { position: relative; display: flex; flex-direction: column; min-height: 0; border-radius: var(--r-group); background: var(--card); border: 1px solid var(--card-border); box-shadow: var(--card-shadow); overflow: hidden; }
+.cloth-stage { position: relative; flex: 1; min-height: 240px; background: linear-gradient(180deg, var(--bg), var(--card)); }
+.cloth-stage[data-bg="tema"] { background: var(--card); }
+.cloth-stage[data-bg="kotak"], .cloth-stage[data-bg="bening"] { background: repeating-conic-gradient(var(--sep) 0 25%, var(--card) 0 50%) 0 0 / 16px 16px; }
+.cloth-stage .hint { position: absolute; left: 16px; top: 12px; font-size: 12px; color: var(--sec); z-index: 1; pointer-events: none; }
+.cloth-stage .nogl { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; color: var(--sec); }
+.cloth-bar { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--sep); background: var(--foot-bg); flex-wrap: wrap; }
+.cloth-bar .sp { flex: 1; }

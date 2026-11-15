@@ -45,6 +45,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
             <span>Aset Roblox</span>
           </button>
+          <button class="side-row" data-tab="clothing" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+            <span>Pakaian Klasik</span>
+          </button>
         </nav>
         <div class="side-bottom">
           <label for="theme">Tema</label>
@@ -381,6 +385,49 @@
             </div>
           </footer>
         </div>
+
+        <div class="tab" id="tab-clothing">
+          <header class="toolbar"><span></span><h1>Pakaian Klasik</h1><div class="tb-slot"><div class="seg" id="c-kind" role="radiogroup" aria-label="Jenis"><button type="button" class="on" data-v="shirt">Kemeja</button><button type="button" data-v="pants">Celana</button></div></div></header>
+          <div class="cloth">
+            <div class="cloth-ctl">
+              <div class="group">
+                <div class="drop" id="c-drop-shirt">
+                  <canvas class="thumb" id="c-th-shirt" width="52" height="50" aria-hidden="true"></canvas>
+                  <div class="dn"><strong>Kemeja</strong><small id="c-nm-shirt">Seret PNG ke sini atau pilih file</small></div>
+                  <button class="btn line" id="c-pick-shirt" type="button">Pilih gambar (PNG)</button>
+                  <button class="btn line x" id="c-clear-shirt" type="button" aria-label="Lepas kemeja" hidden>Lepas</button>
+                </div>
+                <div class="drop" id="c-drop-pants">
+                  <canvas class="thumb" id="c-th-pants" width="52" height="50" aria-hidden="true"></canvas>
+                  <div class="dn"><strong>Celana</strong><small id="c-nm-pants">Seret PNG ke sini atau pilih file</small></div>
+                  <button class="btn line" id="c-pick-pants" type="button">Pilih gambar (PNG)</button>
+                  <button class="btn line x" id="c-clear-pants" type="button" aria-label="Lepas celana" hidden>Lepas</button>
+                </div>
+                <p class="err" id="c-err" role="alert" hidden></p>
+                <div class="mini"><button class="btn line" id="c-guide" type="button">Unduh template panduan</button><button class="btn line" id="c-save" type="button" disabled>Simpan PNG</button></div>
+              </div>
+              <div class="group">
+                <div class="row"><span class="l">Garis template<small>Tampilkan batas bagian di avatar</small></span><div class="seg" id="c-lines" role="radiogroup" aria-label="Garis template"><button type="button" class="on" data-v="off">Mati</button><button type="button" data-v="on">Nyala</button></div></div>
+                <div class="row"><span class="l">Putar otomatis</span><div class="seg" id="c-rot" role="radiogroup" aria-label="Putar otomatis"><button type="button" class="on" data-v="on">Ya</button><button type="button" data-v="off">Tidak</button></div></div>
+                <div class="row"><span class="l">Latar</span><div class="seg" id="c-bg" role="radiogroup" aria-label="Latar"><button type="button" class="on" data-v="tema">Tema</button><button type="button" data-v="kotak">Kotak</button><button type="button" data-v="bening">Bening</button></div></div>
+              </div>
+              <div class="group">
+                <div class="row"><span class="l">Avatar kita<small>Username atau User ID; kosong = avatar bawaan</small></span></div>
+                <form class="urlrow in" id="c-who-form"><input class="field" id="c-who" type="text" placeholder="Username atau User ID" aria-label="Username atau User ID" autocomplete="off" spellcheck="false" /><button class="btn line" id="c-who-go" type="submit">Pakai</button></form>
+                <div class="mini"><button class="btn line" id="c-me" type="button">Avatar saya</button><button class="btn line" id="c-default" type="button">Avatar bawaan</button></div>
+              </div>
+              <p class="legal">Pratinjau memakai bentuk R6. Mengunggah ke Roblox perlu akun, biaya, dan keputusan Anda: <button class="linkbtn" id="c-upload" type="button">Buka halaman unggah Roblox</button></p>
+            </div>
+            <section class="cloth-view" aria-label="Pratinjau 3D">
+              <div class="cloth-stage" id="c-stage" data-bg="tema"><span class="hint">Seret untuk memutar · gulir untuk zoom</span><p class="nogl" id="c-nogl" hidden>WebGL tidak tersedia di jendela ini, pratinjau 3D tidak bisa ditampilkan.</p></div>
+              <div class="cloth-bar"><button class="btn line" id="c-reset" type="button">Atur ulang kamera</button><button class="btn line" id="c-shot" type="button">Simpan gambar preview</button><span class="sp"></span><span class="sub" id="c-who-now">Avatar bawaan (R6)</span></div>
+            </section>
+          </div>
+          <footer class="foot">
+            <div class="msg"><div class="status" id="c-status" role="status">Pilih gambar kemeja atau celana (PNG 585x559), atau unduh template panduan.</div></div>
+          </footer>
+        </div>
+
       </section>
     </div>
     <script type="module" src="./src/main.ts"></script>

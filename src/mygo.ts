@@ -19,6 +19,20 @@ export interface AssetMeta {
   blocked: string;
 }
 
+/** AvatarLook is the player's body colors for the preview. Colors are #RRGGBB. */
+export interface AvatarLook {
+  id: number;
+  name: string;
+  /** R6 or R15 (the preview is R6 either way) */
+  avatarType: string;
+  head: string;
+  torso: string;
+  leftArm: string;
+  rightArm: string;
+  leftLeg: string;
+  rightLeg: string;
+}
+
 /** BatchItem is the state of one line of "Unduh semua". */
 export interface BatchItem {
   index: number;
@@ -27,6 +41,14 @@ export interface BatchItem {
   status: string;
   message: string;
   path: string;
+}
+
+/** ClothingFile is a validated image handed to the page (data is base64). */
+export interface ClothingFile {
+  name: string;
+  data: string;
+  width: number;
+  height: number;
 }
 
 /** ConvProgress is streamed while an audio conversion runs. */
@@ -222,6 +244,14 @@ export const Rokit = {
   openFolder(path: string): Promise<void> {
     return call("Rokit.OpenFolder", path);
   },
+  /** OpenUploadPage opens Roblox's creator dashboard in the default browser. Uploading itself is not done here. */
+  openUploadPage(): Promise<void> {
+    return call("Rokit.OpenUploadPage");
+  },
+  /** PickClothingImage opens the file dialog for a PNG and validates it. An empty Name means cancelled. */
+  pickClothingImage(): Promise<ClothingFile> {
+    return call("Rokit.PickClothingImage");
+  },
   /** PickFile opens the native file dialog; "" means cancelled. */
   pickFile(): Promise<string> {
     return call("Rokit.PickFile");
@@ -245,6 +275,10 @@ export const Rokit = {
   /** RobloxAccountInfo says who is logged in, from what is stored (no network). */
   robloxAccountInfo(): Promise<RobloxAccount> {
     return call("Rokit.RobloxAccountInfo");
+  },
+  /** RobloxAvatarLook finds a player by username or User ID and returns their body colors. Public endpoints only. */
+  robloxAvatarLook(who: string): Promise<AvatarLook> {
+    return call("Rokit.RobloxAvatarLook", who);
   },
   /**
    * RobloxCheck ("Cek") parses the input and fetches name, type and creator. It also asks the delivery
@@ -276,6 +310,17 @@ export const Rokit = {
   /** RobloxLogout forgets the stored login. The session on roblox.com itself stays valid until you sign out there. */
   robloxLogout(): Promise<void> {
     return call("Rokit.RobloxLogout");
+  },
+  /** RobloxMyAvatar is the "Avatar saya" shortcut: the logged-in account's avatar, looked up by its public ID. */
+  robloxMyAvatar(): Promise<AvatarLook> {
+    return call("Rokit.RobloxMyAvatar");
+  },
+  /**
+   * SaveClothingImage writes a PNG to Downloads\Rokit-Pakaian, never overwriting. kind is kemeja, celana, panduan
+   * or preview; the first three must be exactly 585x559, a preview is any PNG up to 20 MB.
+   */
+  saveClothingImage(kind: string, dataB64: string): Promise<string> {
+    return call("Rokit.SaveClothingImage", kind, dataB64);
   },
   /** SetTheme saves the theme; unknown names are rejected. */
   setTheme(name: string): Promise<void> {
