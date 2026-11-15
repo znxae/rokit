@@ -56,18 +56,48 @@ func TestParseAssetRef(t *testing.T) {
 }
 
 func TestValidCDNURL(t *testing.T) {
-	good := []string{"https://fts.rbxcdn.com/v2/sc1/abc?x=1", "https://c0.rbxcdn.com/x", "https://A.RBXCDN.COM/x"}
-	bad := []string{"http://fts.rbxcdn.com/x", "https://rbxcdn.com/x", "https://evilrbxcdn.com/x", "https://fts.rbxcdn.com.evil.com/x",
-		"https://fts.rbxcdn.com@evil.com/x", "https://x.rbxcdn.com:444/x", "ftp://x.rbxcdn.com/x", "", "//x.rbxcdn.com/x"}
-	for _, u := range good {
-		if !ValidCDNURL(u) {
-			t.Errorf("ValidCDNURL(%q) = false", u)
+	for raw, want := range map[string]bool{
+		"https://fts.rbxcdn.com/v2/sc1/abc?x=1": true, "https://c0.rbxcdn.com/x": true, "https://a.rbxcdn.com/x": true,
+		"https://rbxcdn.com/x": true, "https://A.RBXCDN.COM/x": true, "https://fts.rbxcdn.com:443/x": true, "https://fts.rbxcdn.com./x": true,
+		"http://fts.rbxcdn.com/x": false, "https://evilrbxcdn.com/x": false, "https://rbxcdn.com.evil.com/x": false,
+		"https://fts.rbxcdn.com.evil.com/x": false, "https://user@rbxcdn.com/x": false, "https://fts.rbxcdn.com@evil.com/x": false,
+		"https://rbxcdn.com:8443/x": false, "https://x.rbxcdn.com:444/x": false, "https://127.0.0.1/x": false, "https://[::1]/x": false,
+		"https://1.2.3.4:443/x": false, "ftp://x.rbxcdn.com/x": false, "": false, "//x.rbxcdn.com/x": false, "https://.rbxcdn.com/x": false,
+		"https://www.roblox.com/x": false, "https://assetdelivery.roblox.com/x": false, "https://-rbxcdn.com/x": false,
+	} {
+		if got := ValidCDNURL(raw); got != want {
+			t.Errorf("ValidCDNURL(%q) = %v, want %v", raw, got, want)
 		}
 	}
-	for _, u := range bad {
-		if ValidCDNURL(u) {
-			t.Errorf("ValidCDNURL(%q) = true", u)
-		}
+}
+
+func TestPickLocationAndSafeHost(t *testing.T) {
+	// several entries: skip the bad ones, take the first that passes
+	if got, err := pickLocation([]string{"", "http://x.rbxcdn.com/a", "https://evil.example/b", "https://c1.rbxcdn.com/c?token=SECRET"}); err != nil || got != "https://c1.rbxcdn.com/c?token=SECRET" {
+		t.Errorf("%q %v", got, err)
+	}
+	// none valid: the message names scheme+host only, never the query or userinfo
+	_, err := pickLocation([]string{"http://user:pw@cdn.example.com:8080/path/secret?token=SECRET#frag"})
+	if err == nil || !strings.Contains(err.Error(), "(host: http://cdn.example.com)") || strings.Contains(err.Error(), "SECRET") || strings.Contains(err.Error(), "pw") || strings.Contains(err.Error(), "secret") {
+		t.Errorf("%v", err)
+	}
+	if _, err := pickLocation(nil); err == nil || err.Error() != msgRobloxGone {
+		t.Errorf("%v", err)
+	}
+	if SafeHost("::bad") != "(tidak terbaca)" {
+		t.Error(SafeHost("::bad"))
+	}
+	// the same selection applies through the real parsers
+	loc, _, err := ParseDelivery([]byte(`{"locations":[{"location":"https://evil.example/x"},{"assetFormat":"source","location":"https://fts.rbxcdn.com/ok"}],"assetTypeId":4}`))
+	if err != nil || loc != "https://fts.rbxcdn.com/ok" {
+		t.Errorf("%q %v", loc, err)
+	}
+	if _, _, err := ParseDelivery([]byte(`{"locations":[{"location":"https://evil.example/x?t=SECRET"}]}`)); err == nil || !strings.Contains(err.Error(), "(host: https://evil.example)") || strings.Contains(err.Error(), "SECRET") {
+		t.Errorf("%v", err)
+	}
+	b, _ := ParseBatch([]byte(`[{"requestId":"7","assetTypeId":3,"locations":[{"location":"http://x.rbxcdn.com/a"},{"location":"https://c0.rbxcdn.com/b"}]},{"requestId":"8","locations":[{"location":"https://evil.example/q"}]}]`))
+	if b[7].Err != nil || b[7].Loc != "https://c0.rbxcdn.com/b" || b[8].Err == nil || !strings.Contains(b[8].Err.Error(), "(host: https://evil.example)") {
+		t.Errorf("%+v", b)
 	}
 }
 

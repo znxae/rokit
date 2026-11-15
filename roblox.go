@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -20,6 +21,7 @@ const (
 	msgRobloxPriv   = "Aset ini privat atau butuh login Roblox; tidak bisa diunduh tanpa akses"
 	msgRobloxGone   = "Aset tidak ditemukan atau sudah dihapus."
 	msgRobloxRate   = "Terlalu banyak permintaan, coba lagi nanti"
+	msgRobloxCDN    = "Roblox memberi alamat unduhan yang tidak diizinkan (bukan rbxcdn.com lewat https)"
 	msgRobloxFormat = "Masukkan ID aset (angka) atau URL dari roblox.com, create.roblox.com, atau rbxassetid://ID."
 )
 
@@ -71,14 +73,48 @@ func positiveID(s string) (int64, error) {
 	return n, nil
 }
 
-// ValidCDNURL: the only place a download may come from is https://*.rbxcdn.com.
+// ValidCDNURL: the only place a download may come from is https://rbxcdn.com or https://*.rbxcdn.com
+// (whole-label match, so evilrbxcdn.com and rbxcdn.com.evil.com fail). No userinfo, no port but 443, no IP literal.
 func ValidCDNURL(raw string) bool {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" {
+	if err != nil || u.Scheme != "https" || u.User != nil || (u.Port() != "" && u.Port() != "443") {
 		return false
 	}
-	h := strings.ToLower(u.Hostname())
-	return strings.HasSuffix(h, ".rbxcdn.com") && len(h) > len(".rbxcdn.com")
+	h := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") // "fts.rbxcdn.com." is the same host
+	if _, err := netip.ParseAddr(h); err == nil {
+		return false
+	}
+	return h == "rbxcdn.com" || (strings.HasSuffix(h, ".rbxcdn.com") && !strings.HasPrefix(h, ".") && !strings.Contains(h, ".."))
+}
+
+// SafeHost is "scheme://host" of a URL for error messages: no userinfo, path, query or token.
+func SafeHost(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "(tidak terbaca)"
+	}
+	return u.Scheme + "://" + u.Hostname()
+}
+
+// pickLocation returns the first location that passes ValidCDNURL. When none does, the error names the
+// scheme and host of the first one so the problem can be diagnosed without leaking a signed URL.
+func pickLocation(locs []string) (string, error) {
+	first := ""
+	for _, l := range locs {
+		if l == "" {
+			continue
+		}
+		if first == "" {
+			first = l
+		}
+		if ValidCDNURL(l) {
+			return l, nil
+		}
+	}
+	if first == "" {
+		return "", errors.New(msgRobloxGone)
+	}
+	return "", fmt.Errorf("%s (host: %s)", msgRobloxCDN, SafeHost(first))
 }
 
 // AssetMeta is what "Cek" shows.
@@ -155,10 +191,12 @@ func ParseDelivery(b []byte) (loc string, typeID int, err error) {
 	if len(d.Errors) > 0 {
 		return "", 0, DeliveryError(d.Errors[0].Code, d.Errors[0].Message)
 	}
-	if len(d.Locations) == 0 || d.Locations[0].Location == "" {
-		return "", 0, errors.New(msgRobloxGone)
+	locs := make([]string, len(d.Locations))
+	for i, l := range d.Locations {
+		locs[i] = l.Location
 	}
-	return d.Locations[0].Location, d.AssetTypeID, nil
+	loc, err = pickLocation(locs)
+	return loc, d.AssetTypeID, err
 }
 
 // DeliveryError maps a Roblox error code to the message the page shows.
@@ -389,10 +427,13 @@ func ParseBatch(b []byte) (map[int64]Delivered, error) {
 		switch {
 		case len(x.Errors) > 0:
 			out[id] = Delivered{Err: DeliveryError(x.Errors[0].Code, x.Errors[0].Message)}
-		case len(x.Locations) == 0 || x.Locations[0].Location == "":
-			out[id] = Delivered{Err: errors.New(msgRobloxGone)}
 		default:
-			out[id] = Delivered{Loc: x.Locations[0].Location, TypeID: x.AssetTypeID}
+			locs := make([]string, len(x.Locations))
+			for i, l := range x.Locations {
+				locs[i] = l.Location
+			}
+			loc, err := pickLocation(locs)
+			out[id] = Delivered{Loc: loc, TypeID: x.AssetTypeID, Err: err}
 		}
 	}
 	return out, nil

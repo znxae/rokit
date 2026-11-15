@@ -43,7 +43,7 @@ var robloxAPI = &http.Client{
 var robloxCDN = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) > 3 || !ValidCDNURL(req.URL.String()) {
-			return errors.New("Roblox mengalihkan unduhan ke alamat yang tidak diizinkan")
+			return fmt.Errorf("Roblox mengalihkan unduhan ke alamat yang tidak diizinkan (host: %s)", SafeHost(req.URL.String()))
 		}
 		return nil
 	},
@@ -218,7 +218,7 @@ func robloxFetch(ctx context.Context, id int64, depth int, opts RobloxOpts, pre 
 		}
 	}
 	if !ValidCDNURL(loc) {
-		return RobloxSaved{}, errors.New("Roblox memberi alamat unduhan yang tidak diizinkan (bukan *.rbxcdn.com lewat https)")
+		return RobloxSaved{}, fmt.Errorf("%s (host: %s)", msgRobloxCDN, SafeHost(loc))
 	}
 	if typeID == 0 {
 		typeID = meta.TypeID
