@@ -66,14 +66,22 @@ func (r *Rokit) PickClothingImage() (ClothingFile, error) {
 	if err != nil || len(sel) == 0 {
 		return ClothingFile{}, err
 	}
-	st, err := os.Stat(sel[0])
+	return ReadClothingFile(sel[0])
+}
+
+// ReadClothingFile is the binding for a dropped PNG: same checks as the picker.
+func (r *Rokit) ReadClothingFile(path string) (ClothingFile, error) { return ReadClothingFile(path) }
+
+// ReadClothingFile reads a PNG up to 4 MB and checks it is exactly 585x559.
+func ReadClothingFile(path string) (ClothingFile, error) {
+	st, err := os.Stat(path)
 	if err != nil {
 		return ClothingFile{}, err
 	}
 	if st.Size() > MaxClothingBytes {
 		return ClothingFile{}, fmt.Errorf("file terlalu besar (%.1f MB); batas %d MB", float64(st.Size())/(1<<20), MaxClothingBytes>>20)
 	}
-	b, err := os.ReadFile(sel[0])
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return ClothingFile{}, err
 	}
@@ -81,7 +89,7 @@ func (r *Rokit) PickClothingImage() (ClothingFile, error) {
 	if err != nil {
 		return ClothingFile{}, err
 	}
-	return ClothingFile{Name: filepath.Base(sel[0]), Data: base64.StdEncoding.EncodeToString(b), Width: w, Height: h}, nil
+	return ClothingFile{Name: filepath.Base(path), Data: base64.StdEncoding.EncodeToString(b), Width: w, Height: h}, nil
 }
 
 var clothingKinds = map[string]string{"kemeja": "kemeja", "celana": "celana", "panduan": "template-panduan", "preview": "preview"}

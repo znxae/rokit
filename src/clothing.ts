@@ -1,8 +1,8 @@
 import { Rokit } from "./mygo";
 import { ClothingViewer, DEFAULT_LOOK, type Look } from "./clothing_scene";
 import { drawGuide } from "./clothing_guide";
-import { checkClothingFile, MAX_BYTES, TEMPLATE_H, TEMPLATE_W, validateClothingBytes } from "./clothing_uv";
-import { $, errText, segmented, segValue, setStatus, showError } from "./ui";
+import { TEMPLATE_H, TEMPLATE_W, validateClothingBytes } from "./clothing_uv";
+import { $, baseName, errText, segmented, segValue, setStatus, showError } from "./ui";
 
 type Kind = "shirt" | "pants";
 const NAME: Record<Kind, string> = { shirt: "kemeja", pants: "celana" };
@@ -19,6 +19,9 @@ function bytesToB64(b: Uint8Array): string {
   for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
   return btoa(s);
 }
+
+/** Set by initClothing: a PNG dropped at (x, y) goes to the box under the cursor, else to the selected kind. */
+export let dropClothing: (path: string, x: number, y: number) => Promise<void> = async () => {};
 
 export function initClothing() {
   const tab = $("#tab-clothing");
@@ -103,20 +106,21 @@ export function initClothing() {
       drop.classList.add("over");
     });
     drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-    drop.addEventListener("drop", async (e) => {
-      e.preventDefault();
-      drop.classList.remove("over");
-      const f = e.dataTransfer?.files?.[0];
-      if (!f) return;
-      if (f.size > MAX_BYTES) {
-        showError(err, `${f.name}: ${checkClothingFile({ size: f.size, width: 0, height: 0, isPng: true })}`);
-        return;
-      }
-      await load(kind, new Uint8Array(await f.arrayBuffer()), f.name);
-    });
+    // The file itself arrives natively with its path (dropClothing); this only draws the highlight.
+    drop.addEventListener("drop", () => drop.classList.remove("over"));
   }
-  // A file dropped outside a drop zone must not make the web view navigate to it.
-  for (const ev of ["dragover", "drop"]) tab.addEventListener(ev, (e) => e.preventDefault());
+
+  dropClothing = async (path, x, y) => {
+    const over = document.elementFromPoint(x, y)?.closest(".drop")?.id;
+    const kind: Kind = over === "c-drop-pants" ? "pants" : over === "c-drop-shirt" ? "shirt" : active();
+    try {
+      const f = await Rokit.readClothingFile(path);
+      await load(kind, b64ToBytes(f.data), f.name);
+    } catch (e) {
+      showError(err, `${baseName(path)}: ${errText(e)}`);
+      setStatus(status, "fail", "Gambar ditolak.");
+    }
+  };
 
   segmented(kindSeg, renderButtons);
   segmented($("#c-lines", tab), (v) => viewer?.setOverlay(v === "on"));

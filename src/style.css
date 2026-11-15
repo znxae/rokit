@@ -289,3 +289,10 @@ dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .cloth-stage .nogl { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; color: var(--sec); }
 .cloth-bar { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--sep); background: var(--foot-bg); flex-wrap: wrap; }
 .cloth-bar .sp { flex: 1; }
+
+/* ---- Drop file ke jendela ---- */
+.dropveil { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: grid; padding: 12px; }
+.dropveil[hidden], .toast[hidden] { display: none; }
+.dv-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed var(--accent); border-radius: var(--r-group); background: color-mix(in srgb, var(--bg) 82%, transparent); color: var(--accent-text); font-size: 17px; }
+.toast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 60; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px; background: var(--card); color: var(--text); border: 1px solid var(--card-border); box-shadow: var(--card-shadow); font-size: 14px; pointer-events: none; }
+.toast.err { border-color: var(--err); }

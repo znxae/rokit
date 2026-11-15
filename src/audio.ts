@@ -7,6 +7,8 @@ const BARS = 88;
 
 /** Set by initAudio: lets other tabs load a file as the Audio tab's input. */
 export let loadAudioFile: (path: string, title?: string) => Promise<void> = async () => {};
+/** A file dropped on the window: needs an audio stream, else throws a message for the user. */
+export let dropAudio: (path: string) => Promise<void> = async () => {};
 
 export function initAudio() {
   const tab = $("#tab-audio");
@@ -112,6 +114,12 @@ export function initAudio() {
     setStatus(status, "", "Belum dikonversi");
     showError(error, "");
     render();
+  };
+
+  dropAudio = async (path) => {
+    if (busy) throw new Error("Sedang memproses; tunggu sampai selesai.");
+    if (!(await Rokit.probeVideo(path)).hasAudio) throw new Error("Video ini tidak punya audio");
+    await loadAudioFile(path);
   };
 
   pick.addEventListener("click", () =>

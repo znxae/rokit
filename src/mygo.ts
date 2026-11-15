@@ -78,6 +78,14 @@ export interface Downloaded {
   title: string;
 }
 
+/** DropItem is one dropped path and what it is: audio, video, image (PNG), folder, missing or other. */
+export interface DropItem {
+  path: string;
+  name: string;
+  ext: string;
+  kind: string;
+}
+
 /** FrameOpts configure video -> images extraction. */
 export interface FrameOpts {
   /** png | jpg */
@@ -197,6 +205,10 @@ export const Rokit = {
   checkTools(): Promise<Tools> {
     return call("Rokit.CheckTools");
   },
+  /** ClassifyDrop describes dropped paths for the page; the page decides per tab what to do with them. */
+  classifyDrop(paths: string[]): Promise<DropItem[]> {
+    return call("Rokit.ClassifyDrop", paths);
+  },
   /** Convert runs ffmpeg. A downloaded temp input is deleted after success. */
   convert(input: string, output: string, o: Opts, progress: Channel<ConvProgress>): Promise<void> {
     return call("Rokit.Convert", input, output, o, progress);
@@ -271,6 +283,10 @@ export const Rokit = {
   /** ProbeVideo reads duration, frame rate and streams of a file. */
   probeVideo(path: string): Promise<VideoInfo> {
     return call("Rokit.ProbeVideo", path);
+  },
+  /** ReadClothingFile is the binding for a dropped PNG: same checks as the picker. */
+  readClothingFile(path: string): Promise<ClothingFile> {
+    return call("Rokit.ReadClothingFile", path);
   },
   /** RobloxAccountInfo says who is logged in, from what is stored (no network). */
   robloxAccountInfo(): Promise<RobloxAccount> {

@@ -2,6 +2,9 @@ import { Channel } from "mygo-runtime";
 import { Rokit, type FrameOpts, type FrameProgress, type VideoInfo } from "./mygo";
 import { $, baseName, errText, fmtDuration, fmtInt, segmented, segValue, setProgress, setSegDisabled, setStatus, showError } from "./ui";
 
+/** Set by initFrames: a video dropped on the window loads like "Pilih video". */
+export let dropVideo: (path: string) => Promise<void> = async () => {};
+
 export function initFrames() {
   const tab = $("#tab-frames");
   const pick = $<HTMLButtonElement>("#f-pick", tab);
@@ -94,6 +97,14 @@ export function initFrames() {
       render();
     }
   }
+
+  dropVideo = async (path) => {
+    if (busy) throw new Error("Sedang memproses; tunggu sampai selesai.");
+    await run("Membuka video…", async () => {
+      await setInput(path);
+      setStatus(status, "", "Siap diekstrak.");
+    });
+  };
 
   pick.addEventListener("click", () =>
     void run("Membuka video…", async () => {

@@ -7,6 +7,7 @@ import { initDownload } from "./download";
 import { initFrames } from "./frames";
 import { initClothing } from "./clothing";
 import { initTheme } from "./theme";
+import { initDropzone } from "./dropzone";
 import { $, errText, showTab } from "./ui";
 
 function initTabs() {
@@ -60,5 +61,6 @@ initAudio();
 initFrames();
 initDownload();
 initClothing();
+initDropzone();
 initRoblox();
 void checkTools();

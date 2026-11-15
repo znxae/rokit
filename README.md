@@ -14,6 +14,8 @@ The Rust/egui version of the audio editor lives on the `main` branch.
 | Aset Roblox | Anonymous check and download of a Roblox asset, or a pasted list. See below. |
 | Pakaian Klasik | 3D preview of Roblox Classic Shirt/Pants PNGs on an R6 avatar. See below. |
 
+**Drop files on the window** (real paths from MyGo's `onFileDrop`): Audio takes audio or video (needs an audio stream), Video ke Gambar a video, Pakaian Klasik a PNG onto the Kemeja/Celana box under the cursor; elsewhere a short toast says the file cannot be used. Several files: only the first is used.
+
 Themes (picker in the sidebar, saved in `%APPDATA%\Rokit\settings.json`): Otomatis, Apple Terang, Gelap, Material Terang, Material Gelap, OLED, Kaca.
 
 ## Aset Roblox
