@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"github.com/egoist/mygo"
 	"math"
 	"net/http"
 	"os"
@@ -238,5 +240,48 @@ func TestCookieOnlyToRobloxAPIHosts(t *testing.T) {
 		if got := req.Header.Get("Cookie") != ""; got != want {
 			t.Errorf("%s: cookie sent=%v want %v", url, got, want)
 		}
+	}
+}
+
+// Keluar must really delete the Credential Manager entries. Uses dummy values and skips if a real login is stored here.
+func TestLogoutDeletesStoredLogin(t *testing.T) {
+	if _, err := mygo.Secrets.Get(secretCookie); err == nil {
+		t.Skip("a login is stored under this service; not touching it")
+	}
+	if err := mygo.Secrets.Set(secretCookie, []byte("dummy-not-a-real-cookie")); err != nil {
+		t.Skip("no credential store: ", err)
+	}
+	_ = mygo.Secrets.Set(secretAccount, []byte(`{"name":"dummy"}`))
+	setStoredCookie("x")
+	if err := (&Rokit{}).RobloxLogout(); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{secretCookie, secretAccount} {
+		if _, err := mygo.Secrets.Get(k); !errors.Is(err, mygo.ErrSecretNotFound) {
+			t.Errorf("%s still stored: %v", k, err)
+		}
+	}
+	if loggedIn() {
+		t.Error("still logged in after Keluar")
+	}
+}
+
+func TestLoginNoticeFlagSurvivesThemeChange(t *testing.T) {
+	dir := t.TempDir()
+	old := settingsPath
+	settingsPath = func() (string, error) { return dir + "/s.json", nil }
+	defer func() { settingsPath = old }()
+	if err := saveSettings(settings{Theme: "dark", LoginNoticeSeen: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := (&Rokit{}).SetTheme("oled"); err != nil {
+		t.Fatal(err)
+	}
+	if s := loadSettings(); s.Theme != "oled" || !s.LoginNoticeSeen {
+		t.Errorf("%+v", s)
+	}
+	b, _ := os.ReadFile(dir + "/s.json")
+	if strings.Contains(strings.ToLower(string(b)), "cookie") || strings.Contains(string(b), "ROBLOSECURITY") {
+		t.Errorf("settings.json mentions a cookie: %s", b)
 	}
 }

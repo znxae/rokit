@@ -19,6 +19,8 @@ var themeBackground = map[string]string{
 
 type settings struct {
 	Theme string `json:"theme"`
+	// LoginNoticeSeen: the one-time Roblox login explanation was accepted. Not a secret.
+	LoginNoticeSeen bool `json:"loginNoticeSeen,omitempty"`
 }
 
 // settingsPath is a variable so tests can point it at a temp dir.
@@ -44,6 +46,7 @@ func loadSettings() settings {
 	if json.Unmarshal(b, &got) == nil && slices.Contains(themeNames, got.Theme) {
 		s.Theme = got.Theme
 	}
+	s.LoginNoticeSeen = got.LoginNoticeSeen
 	return s // a missing or corrupt file just means the default
 }
 
@@ -74,5 +77,7 @@ func (r *Rokit) SetTheme(name string) error {
 	if name == "" {
 		return errors.New("tema kosong")
 	}
-	return saveSettings(settings{Theme: name})
+	s := loadSettings()
+	s.Theme = name
+	return saveSettings(s)
 }

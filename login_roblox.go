@@ -123,6 +123,32 @@ func (r *Rokit) RobloxLogout() error {
 	return first
 }
 
+// loginNotice is shown once, before the login window first opens.
+const loginNotice = `Yang akan terjadi:
+• Halaman login resmi roblox.com dibuka di jendela terpisah. Aplikasi ini tidak pernah melihat sandi Anda.
+• Aplikasi menyimpan cookie sesi Roblox di Windows Credential Manager.
+• Cookie itu hanya dikirim lewat https ke assetdelivery.roblox.com, economy.roblox.com, dan users.roblox.com.
+• "Keluar" menghapusnya dari PC ini. Sesi di roblox.com tetap berlaku sampai Anda keluar di situs Roblox.
+
+Perhatian: cookie sesi yang bocor memberi akses penuh ke akun. Pakai fitur ini hanya dari salinan aplikasi yang Anda percaya atau build sendiri.`
+
+// confirmLoginNotice asks once; "Batal" stops the login, "Lanjut" is remembered in settings.json.
+func confirmLoginNotice() error {
+	s := loadSettings()
+	if s.LoginNoticeSeen {
+		return nil
+	}
+	res, err := mygo.Dialog.Message(mygo.MessageOptions{Type: mygo.MessageInfo, Title: "Masuk Roblox", Message: "Masuk ke Roblox?", Detail: loginNotice, Buttons: []string{"Lanjut", "Batal"}, DefaultButton: 1, CancelButton: 1})
+	if err != nil {
+		return err
+	}
+	if res.Button != 0 {
+		return errors.New("login Roblox dibatalkan")
+	}
+	s.LoginNoticeSeen = true
+	return saveSettings(s)
+}
+
 // RobloxLogin opens the official Roblox login page in its own window and waits for the login to finish.
 func (r *Rokit) RobloxLogin(ctx context.Context) (RobloxAccount, error) {
 	if !loginMu.TryLock() {
@@ -130,6 +156,9 @@ func (r *Rokit) RobloxLogin(ctx context.Context) (RobloxAccount, error) {
 	}
 	defer loginMu.Unlock()
 
+	if err := confirmLoginNotice(); err != nil {
+		return RobloxAccount{}, err
+	}
 	sess := mygo.NewEphemeralSession() // in memory, apart from the app's own pages; the page cannot call Go
 	w := mygo.NewWindow(mygo.WindowOptions{Title: "Masuk Roblox", URL: "https://www.roblox.com/login", Width: 520, Height: 740, Page: mygo.PageOptions{Session: sess}})
 	closed := make(chan struct{})
