@@ -10,3 +10,11 @@ node_modules/
 mygo_windows_*.syso
 /.tools/
 /release/
+
+# staged by scripts/release.ps1 (never committed)
+/resources/bin/
+/resources/licenses/
+/resources/THIRD_PARTY_NOTICES.md
+/resources/README.md
+/resources/tools.lock
+/resources/LICENSE*

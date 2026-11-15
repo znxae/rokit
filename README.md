@@ -71,26 +71,29 @@ Preview a Classic Shirt and/or Pants image (PNG, exactly 585x559, up to 4 MB) on
   official yt-dlp release into `bin` after checking its SHA-256 against the release's `SHA2-256SUMS`.
   If `bin` is empty and nothing is on PATH the app says "Alat bawaan ... tidak ditemukan; pasang ulang aplikasi".
 
-## Build the portable zip
+## Installer and portable zip
+
+One command builds both, with their SHA-256 in `release\SHA256SUMS.txt` (close Rokit first; the first run needs internet for the pinned tools and for MyGo to fetch NSIS):
 
 ```
-npx mygo build
-powershell -File scripts\fetch-tools.ps1     # pinned yt-dlp + ffmpeg (LGPL build) into .tools\bin, SHA-256 checked against tools.lock
-powershell -File scripts\package.ps1         # release\Rokit-<version>-win64.zip
+powershell -ExecutionPolicy Bypass -File scripts\release.ps1
 ```
+
+It runs `scripts\fetch-tools.ps1` if `.tools\bin` is missing (pinned yt-dlp + ffmpeg LGPL build, SHA-256 checked against `tools.lock`; nothing but `--version` is run after the hashes match), stages `bin\`, notices and the README into `resources\` (git-ignored; MyGo copies `resources\` next to the exe and the installer installs it), runs `npx mygo build`, then `scripts\package.ps1` for `release\Rokit-<version>-win64.zip`.
+
+**Installer** (`release\rokit-audio-editor-setup-<version>-amd64.exe`, built by MyGo with NSIS, Indonesian): per-user, no admin prompt, into `%LOCALAPPDATA%\Programs\Rokit` (the folder can be changed). It installs the exe, `bin\ffmpeg.exe`, `ffprobe.exe`, `yt-dlp.exe`, `licenses\`, `THIRD_PARTY_NOTICES.md`, the README and `tools.lock`, a Start menu shortcut "Rokit", and an uninstaller listed in Settings > Apps. The finish page has two check boxes, both on by default: run Rokit, and a Desktop shortcut (silent installs `/S` make none). The uninstaller removes the shortcuts, the registry entry and the whole install folder (including a yt-dlp that "Perbarui yt-dlp" updated), and asks whether to delete `%APPDATA%\Rokit` (settings; default: keep). A Roblox login kept in Credential Manager is removed with *Keluar* in the app, not by the uninstaller. The installer is **not code-signed**, so Windows SmartScreen warns more strongly for a downloaded setup.exe than for the zip (More info > Run anyway); the zip is the alternative.
 
 `tools.lock` pins the exact URLs and hashes (official sources only: github.com/yt-dlp/yt-dlp and github.com/FFmpeg-Builds/FFmpeg-Builds
-releases); the script fails on any mismatch and runs nothing but `--version` after the hashes match. No binaries are committed
-(`.tools\` and `release\` are git-ignored). Licenses: ffmpeg is LGPL-3.0-or-later, yt-dlp is the Unlicense; see `THIRD_PARTY_NOTICES.md`
-(also in the zip, with the source-offer links and `licenses\ffmpeg-LICENSE.txt`). Bumping a tool means editing `tools.lock`
-with the publisher's new URL and checksum.
+releases); the script fails on any mismatch. No binaries are committed (`.tools\`, `release\`, `resources\bin` are git-ignored). Licenses: ffmpeg is LGPL-3.0-or-later, yt-dlp is the Unlicense; see `THIRD_PARTY_NOTICES.md`
+(also in the zip and the installer, with the source-offer links and `licenses\ffmpeg-LICENSE.txt`). Bumping a tool means editing `tools.lock`
+with the publisher's new URL and checksum. A `LICENSE` file is added to the zip and installer if the repo has one (it has none yet).
 
 ## Run the built app
 
 ```
-release\Rokit-0.1.0-win64.zip                       (portable, with bin\; the thing to distribute)
-build\windows-amd64\Rokit Audio Editor.exe          (exe only; needs ffmpeg/yt-dlp on PATH or a bin folder beside it)
-build\windows-amd64\rokit-audio-editor-setup-0.1.0-amd64.exe   (installer)
+release\Rokit-0.1.0-win64.zip                                (portable, with bin\)
+release\rokit-audio-editor-setup-0.1.0-amd64.exe             (installer, with bin\)
+build\windows-amd64\Rokit Audio Editor.exe                   (exe only; needs ffmpeg/yt-dlp on PATH or a bin folder beside it)
 ```
 
 ## Develop and build
