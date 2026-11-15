@@ -285,3 +285,15 @@ func TestLoginNoticeFlagSurvivesThemeChange(t *testing.T) {
 		t.Errorf("settings.json mentions a cookie: %s", b)
 	}
 }
+
+func TestCookieNeverToDownloadHosts(t *testing.T) {
+	setStoredCookie("_|WARNING:-" + strings.Repeat("Z", 120))
+	defer setStoredCookie("")
+	for _, u := range []string{"https://contentdelivery.roblox.com/asset/?id=1", "https://fts.rbxcdn.com/x", "https://c0.rbxcdn.com/x"} {
+		req, _ := http.NewRequest("GET", u, nil)
+		attachAuth(req)
+		if req.Header.Get("Cookie") != "" {
+			t.Errorf("cookie attached for %s", u)
+		}
+	}
+}

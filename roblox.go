@@ -21,7 +21,7 @@ const (
 	msgRobloxPriv   = "Aset ini privat atau butuh login Roblox; tidak bisa diunduh tanpa akses"
 	msgRobloxGone   = "Aset tidak ditemukan atau sudah dihapus."
 	msgRobloxRate   = "Terlalu banyak permintaan, coba lagi nanti"
-	msgRobloxCDN    = "Roblox memberi alamat unduhan yang tidak diizinkan (bukan rbxcdn.com lewat https)"
+	msgRobloxCDN    = "Roblox memberi alamat unduhan yang tidak diizinkan (bukan rbxcdn.com atau contentdelivery.roblox.com lewat https)"
 	msgRobloxFormat = "Masukkan ID aset (angka) atau URL dari roblox.com, create.roblox.com, atau rbxassetid://ID."
 )
 
@@ -73,8 +73,10 @@ func positiveID(s string) (int64, error) {
 	return n, nil
 }
 
-// ValidCDNURL: the only place a download may come from is https://rbxcdn.com or https://*.rbxcdn.com
-// (whole-label match, so evilrbxcdn.com and rbxcdn.com.evil.com fail). No userinfo, no port but 443, no IP literal.
+// ValidCDNURL: a download may only come from https://rbxcdn.com, https://*.rbxcdn.com (whole-label match,
+// so evilrbxcdn.com and rbxcdn.com.evil.com fail) or exactly contentdelivery.roblox.com, the host Roblox's
+// delivery answers with for some legacy assets (seen in a real app run). No userinfo, no port but 443, no IP
+// literal. The session cookie is never sent to any of these hosts (see authHosts).
 func ValidCDNURL(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || (u.Port() != "" && u.Port() != "443") {
@@ -84,7 +86,8 @@ func ValidCDNURL(raw string) bool {
 	if _, err := netip.ParseAddr(h); err == nil {
 		return false
 	}
-	return h == "rbxcdn.com" || (strings.HasSuffix(h, ".rbxcdn.com") && !strings.HasPrefix(h, ".") && !strings.Contains(h, ".."))
+	return h == "rbxcdn.com" || h == "contentdelivery.roblox.com" ||
+		(strings.HasSuffix(h, ".rbxcdn.com") && !strings.HasPrefix(h, ".") && !strings.Contains(h, ".."))
 }
 
 // SafeHost is "scheme://host" of a URL for error messages: no userinfo, path, query or token.

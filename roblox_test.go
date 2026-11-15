@@ -63,6 +63,11 @@ func TestValidCDNURL(t *testing.T) {
 		"https://fts.rbxcdn.com.evil.com/x": false, "https://user@rbxcdn.com/x": false, "https://fts.rbxcdn.com@evil.com/x": false,
 		"https://rbxcdn.com:8443/x": false, "https://x.rbxcdn.com:444/x": false, "https://127.0.0.1/x": false, "https://[::1]/x": false,
 		"https://1.2.3.4:443/x": false, "ftp://x.rbxcdn.com/x": false, "": false, "//x.rbxcdn.com/x": false, "https://.rbxcdn.com/x": false,
+		"https://contentdelivery.roblox.com/asset/?id=1": true, "https://CONTENTDELIVERY.roblox.com:443/x": true,
+		"http://contentdelivery.roblox.com/x": false, "https://evilcontentdelivery.roblox.com/x": false,
+		"https://contentdelivery.roblox.com.evil.com/x": false, "https://a.contentdelivery.roblox.com/x": false,
+		"https://contentdelivery.roblox.com:8443/x": false, "https://user@contentdelivery.roblox.com/x": false,
+		"https://roblox.com/x": false, "https://apis.roblox.com/x": false,
 		"https://www.roblox.com/x": false, "https://assetdelivery.roblox.com/x": false, "https://-rbxcdn.com/x": false,
 	} {
 		if got := ValidCDNURL(raw); got != want {
