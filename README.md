@@ -58,7 +58,6 @@ Preview a Classic Shirt and/or Pants image (PNG, exactly 585x559, up to 4 MB) on
 - **three.js** 0.187.0 (MIT) is a pinned npm dependency bundled into the page; no CDN, works offline. Textures use linear filtering; how closely that matches Roblox's own rendering is unverified.
 - **Not included**: uploading to Roblox. *Buka halaman unggah Roblox* only opens `create.roblox.com` in your browser; uploading needs your account, a fee and your decision. Hats/accessories (v2) are not drawn; `mesh.go` could be reused for that.
 
-![Pakaian Klasik tab](docs/clothing-tab.png)
 ![Sample shirt and pants on the default avatar and on an avatar with Roblox's colors](docs/clothing-preview.png)
 
 ## Requirements
