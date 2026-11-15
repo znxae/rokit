@@ -130,10 +130,20 @@ export interface Saved {
   path: string;
 }
 
+/** ToolInfo says which copy of a tool is in use. */
+export interface ToolInfo {
+  found: boolean;
+  /** "bawaan" or "PATH" */
+  source: string;
+  version: string;
+}
+
 /** Tools says which external programs are available. */
 export interface Tools {
   ffmpeg: boolean;
   ytdlp: boolean;
+  ffmpegInfo: ToolInfo;
+  ytdlpInfo: ToolInfo;
 }
 
 /** VideoInfo is what ffprobe says about a media file. */
@@ -161,7 +171,7 @@ export interface VideoMeta {
 
 /** Rokit is the service the page calls. */
 export const Rokit = {
-  /** CheckTools reports whether ffmpeg and yt-dlp are on PATH. */
+  /** CheckTools reports which ffmpeg and yt-dlp are in use (bundled bin first, then PATH) and their versions. */
   checkTools(): Promise<Tools> {
     return call("Rokit.CheckTools");
   },
@@ -285,5 +295,12 @@ export const Rokit = {
   /** Theme returns the saved theme name ("auto" by default). */
   theme(): Promise<string> {
     return call("Rokit.Theme");
+  },
+  /**
+   * UpdateYtDlp downloads the latest official yt-dlp release into bin\, checks its SHA-256 against the
+   * release's own SHA2-256SUMS, runs --version on the new file, and only then replaces the old one.
+   */
+  updateYtDlp(): Promise<ToolInfo> {
+    return call("Rokit.UpdateYtDlp");
   },
 } as const;

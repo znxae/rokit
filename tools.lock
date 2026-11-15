@@ -1,0 +1,15 @@
+{
+  "note": "Pinned third-party tools. Hashes come from the publishers' own checksum files (yt-dlp SHA2-256SUMS, FFmpeg-Builds checksums.sha256). The fetch script fails on any mismatch.",
+  "yt-dlp": {
+    "version": "2026.10.26",
+    "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp.exe",
+    "sha256": "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d",
+    "license": "Unlicense"
+  },
+  "ffmpeg": {
+    "version": "n8.1.3-35-gf1acb0a266 (FFmpeg-Builds autobuild-2026-11-14-12-37, win64 lgpl static)",
+    "url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-14-12-37/ffmpeg-n8.1.3-35-gf1acb0a266-win64-lgpl-8.1.zip",
+    "sha256": "9a1c8c9f389281749b8d93bfcfaf2164cf95fb74101560ba93a0ec92e1f9e56c",
+    "files": ["bin/ffmpeg.exe", "bin/ffprobe.exe", "LICENSE.txt"]
+  }
+}

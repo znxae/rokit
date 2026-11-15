@@ -51,13 +51,31 @@ Many Decals, Images, Models and Places answer 401/403/409 and cannot be download
 ## Requirements
 
 - Windows 10/11 with WebView2 (preinstalled on Windows 11).
-- `ffmpeg` and `ffprobe` on PATH: `winget install Gyan.FFmpeg`
-- `yt-dlp` on PATH (URL download, Unduh Video): `winget install yt-dlp.yt-dlp`
+- Nothing else with the portable zip: it carries `ffmpeg`, `ffprobe` and `yt-dlp` in a `bin` folder next to the exe.
+  The app looks in `<exe folder>\bin` first, then on PATH (so a dev build with ffmpeg/yt-dlp on PATH still works).
+  The "Alat" row on the Unduh Video tab shows which copies are in use and their versions; **Perbarui yt-dlp** downloads the latest
+  official yt-dlp release into `bin` after checking its SHA-256 against the release's `SHA2-256SUMS`.
+  If `bin` is empty and nothing is on PATH the app says "Alat bawaan ... tidak ditemukan; pasang ulang aplikasi".
+
+## Build the portable zip
+
+```
+npx mygo build
+powershell -File scripts\fetch-tools.ps1     # pinned yt-dlp + ffmpeg (LGPL build) into .tools\bin, SHA-256 checked against tools.lock
+powershell -File scripts\package.ps1         # release\Rokit-<version>-win64.zip
+```
+
+`tools.lock` pins the exact URLs and hashes (official sources only: github.com/yt-dlp/yt-dlp and github.com/FFmpeg-Builds/FFmpeg-Builds
+releases); the script fails on any mismatch and runs nothing but `--version` after the hashes match. No binaries are committed
+(`.tools\` and `release\` are git-ignored). Licenses: ffmpeg is LGPL-3.0-or-later, yt-dlp is the Unlicense; see `THIRD_PARTY_NOTICES.md`
+(also in the zip, with the source-offer links and `licenses\ffmpeg-LICENSE.txt`). Bumping a tool means editing `tools.lock`
+with the publisher's new URL and checksum.
 
 ## Run the built app
 
 ```
-build\windows-amd64\Rokit Audio Editor.exe          (portable)
+release\Rokit-0.1.0-win64.zip                       (portable, with bin\; the thing to distribute)
+build\windows-amd64\Rokit Audio Editor.exe          (exe only; needs ffmpeg/yt-dlp on PATH or a bin folder beside it)
 build\windows-amd64\rokit-audio-editor-setup-0.1.0-amd64.exe   (installer)
 ```
 

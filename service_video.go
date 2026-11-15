@@ -82,7 +82,7 @@ func (r *Rokit) ExtractFrames(ctx context.Context, input, outDir string, o Frame
 	}
 	total := EstimateFrames(info, o)
 
-	cmd := exec.CommandContext(ctx, "ffmpeg", BuildFrameArgs(input, dir, o)...)
+	cmd := toolCmd(ctx, "ffmpeg", BuildFrameArgs(input, dir, o)...)
 	hideWindow(cmd)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -140,7 +140,7 @@ func (r *Rokit) Info(ctx context.Context, url string) (VideoMeta, error) {
 	}
 	cctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(cctx, "yt-dlp", "-J", "--no-playlist", "--no-warnings", "--", url)
+	cmd := toolCmd(cctx, "yt-dlp", "-J", "--no-playlist", "--no-warnings", "--", url)
 	hideWindow(cmd)
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
 	var stdout, stderr bytes.Buffer
@@ -204,7 +204,7 @@ func (r *Rokit) DownloadVideo(ctx context.Context, url string, o DLOpts, progres
 	if err != nil {
 		return Saved{}, err
 	}
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := toolCmd(ctx, "yt-dlp", args...)
 	hideWindow(cmd)
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
 	stdout, err1 := cmd.StdoutPipe()

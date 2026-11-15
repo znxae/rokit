@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	ffmpegMsg = "ffmpeg tidak ditemukan di PATH. Pasang dengan `winget install Gyan.FFmpeg` (macOS: `brew install ffmpeg`), lalu restart aplikasi."
-	ytdlpMsg  = "yt-dlp tidak ditemukan di PATH. Pasang dengan `winget install yt-dlp.yt-dlp`, lalu restart aplikasi."
+	ffmpegMsg = "Alat bawaan (ffmpeg) tidak ditemukan; pasang ulang aplikasi."
+	ytdlpMsg  = "Alat bawaan (yt-dlp) tidak ditemukan; pasang ulang aplikasi."
 )
 
 func statFile(p string) (os.FileInfo, error) { return os.Stat(p) }
@@ -29,8 +29,10 @@ var (
 
 // Tools says which external programs are available.
 type Tools struct {
-	FFmpeg bool `json:"ffmpeg"`
-	YtDlp  bool `json:"ytdlp"`
+	FFmpeg     bool     `json:"ffmpeg"`
+	YtDlp      bool     `json:"ytdlp"`
+	FFmpegInfo ToolInfo `json:"ffmpegInfo"`
+	YtDlpInfo  ToolInfo `json:"ytdlpInfo"`
 }
 
 // Downloaded is the result of fetching a URL.
@@ -74,11 +76,10 @@ func (r *Rokit) removeTemp(p string) {
 	r.setTemp(p, false)
 }
 
-// CheckTools reports whether ffmpeg and yt-dlp are on PATH.
+// CheckTools reports which ffmpeg and yt-dlp are in use (bundled bin first, then PATH) and their versions.
 func (r *Rokit) CheckTools() Tools {
-	_, e1 := exec.LookPath("ffmpeg")
-	_, e2 := exec.LookPath("yt-dlp")
-	return Tools{FFmpeg: e1 == nil, YtDlp: e2 == nil}
+	f, y := toolInfo("ffmpeg", "-version"), toolInfo("yt-dlp", "--version")
+	return Tools{FFmpeg: f.Found, YtDlp: y.Found, FFmpegInfo: f, YtDlpInfo: y}
 }
 
 // PickFile opens the native file dialog; "" means cancelled.
@@ -151,7 +152,7 @@ func (r *Rokit) fetch(ctx context.Context, url, format string) (Downloaded, erro
 	}
 	args := []string{"-f", format, "--no-playlist", "--no-simulate", "--windows-filenames",
 		"-o", filepath.ToSlash(dir) + "/%(title).80s.%(ext)s", "--print", "after_move:filepath", "--", url}
-	cmd := exec.CommandContext(ctx, "yt-dlp", args...)
+	cmd := toolCmd(ctx, "yt-dlp", args...)
 	hideWindow(cmd)
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
 	var stdout, stderr bytes.Buffer
@@ -221,7 +222,7 @@ func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts, progr
 		total = info.Duration / o.Speed
 	}
 	args := append([]string{"-progress", "pipe:1", "-nostats"}, BuildArgs(input, output, o)...)
-	cmd := exec.CommandContext(cctx, "ffmpeg", args...)
+	cmd := toolCmd(cctx, "ffmpeg", args...)
 	hideWindow(cmd)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

@@ -82,7 +82,7 @@ func NoAudioStderr(stderr string) bool {
 }
 
 func probeFile(ctx context.Context, path string) (VideoInfo, error) {
-	cmd := exec.CommandContext(ctx, "ffprobe", "-v", "error",
+	cmd := toolCmd(ctx, "ffprobe", "-v", "error",
 		"-show_entries", "stream=codec_type,avg_frame_rate,r_frame_rate,width,height:format=duration",
 		"-of", "json", path)
 	hideWindow(cmd)
