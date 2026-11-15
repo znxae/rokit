@@ -98,15 +98,79 @@ func TestChannels(t *testing.T) {
 }
 
 func TestSpeedHint(t *testing.T) {
-	for speed, want := range map[float64]string{
-		1:   "Speed normal (1x)",
-		1.5: "Untuk kembali normal: ubah speed ke 0.667x (lebih lambat)",
-		0.5: "Untuk kembali normal: ubah speed ke 2.000x (lebih cepat)",
-		4:   "Untuk kembali normal: ubah speed ke 0.250x (lebih lambat)",
+	const tempo15 = "Pitch tetap. Roblox PlaybackSpeed mengubah pitch, jadi jangan pakai mode ini kalau Anda akan memperlambat di Roblox. Di alat lain yang menjaga pitch: ubah speed ke 0.667x (lebih lambat)"
+	for _, k := range []struct {
+		speed      float64
+		mode, want string
+	}{
+		{1, "tempo", "Speed normal (1x)"},
+		{1, "pitch", "Speed normal (1x)"},
+		{1.5, "tempo", tempo15},
+		{1.5, "", tempo15},
+		{0.5, "tempo", "Pitch tetap. Roblox PlaybackSpeed mengubah pitch, jadi jangan pakai mode ini kalau Anda akan memperlambat di Roblox. Di alat lain yang menjaga pitch: ubah speed ke 2.000x (lebih cepat)"},
+		{2, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 0.500 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
+		{4, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 0.250 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
+		{0.25, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 4.000 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
 	} {
-		if got := SpeedHint(speed); got != want {
-			t.Errorf("%v: got %q", speed, got)
+		if got := SpeedHint(k.speed, k.mode); got != k.want {
+			t.Errorf("%v %s: got %q", k.speed, k.mode, got)
 		}
+	}
+}
+
+func TestPitchModeFilters(t *testing.T) {
+	o := opts("wav")
+	o.SpeedMode, o.Speed, o.SampleRate, o.GainDB = "pitch", 2, 44100, -6
+	a := BuildArgs("i", "o", o)
+	if !hasPair(a, "-af", "asetrate=88200,aresample=44100,volume=-6dB") {
+		t.Errorf("pitch filter: %v", a)
+	}
+	for speed, want := range map[float64]string{0.25: "asetrate=11025,aresample=44100", 4: "asetrate=176400,aresample=44100", 1.5: "asetrate=66150,aresample=44100"} {
+		o.GainDB, o.Speed = 0, speed
+		if !hasPair(BuildArgs("i", "o", o), "-af", want) {
+			t.Errorf("%vx: want %s in %v", speed, want, BuildArgs("i", "o", o))
+		}
+	}
+	// 48 kHz input keeps its own rate
+	o.Speed, o.SampleRate = 2, 48000
+	if !hasPair(BuildArgs("i", "o", o), "-af", "asetrate=96000,aresample=48000") {
+		t.Error("48 kHz")
+	}
+	// unknown rate: resample to 44100 first, say so
+	o.SampleRate = 0
+	if !hasPair(BuildArgs("i", "o", o), "-af", "aresample=44100,asetrate=88200,aresample=44100") {
+		t.Error("unknown rate fallback")
+	}
+	for _, mode := range []string{"pitch"} {
+		o.SpeedMode = mode
+		for _, x := range BuildArgs("i", "o", o) {
+			if strings.Contains(x, "atempo") {
+				t.Errorf("atempo must not appear in pitch mode: %v", x)
+			}
+		}
+	}
+	// the default and "tempo" keep atempo and never asetrate
+	for _, mode := range []string{"", "tempo"} {
+		o.SpeedMode = mode
+		if !hasPair(BuildArgs("i", "o", o), "-af", "atempo=2") {
+			t.Errorf("mode %q must use atempo", mode)
+		}
+	}
+	// speed 1 adds no filter in either mode
+	o.Speed, o.SpeedMode = 1, "pitch"
+	if slices.Contains(BuildArgs("i", "o", o), "-af") {
+		t.Error("1x must not filter")
+	}
+	o.Speed, o.SpeedMode = 2, "x"
+	if o.Validate() == nil {
+		t.Error("unknown mode must be rejected")
+	}
+}
+
+func TestProbeSampleRate(t *testing.T) {
+	v, err := ParseProbe([]byte(`{"streams":[{"codec_type":"video","width":1,"height":1},{"codec_type":"audio","sample_rate":"48000"}],"format":{"duration":"1"}}`))
+	if err != nil || v.SampleRate != 48000 || !v.HasAudio {
+		t.Fatalf("%+v %v", v, err)
 	}
 }
 

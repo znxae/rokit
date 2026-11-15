@@ -8,7 +8,7 @@ The Rust/egui version of the audio editor lives on the `main` branch.
 
 | Tab | What it does |
 |---|---|
-| Audio | mp3, wav, flac, ogg, m4a, opus. Bitrate 64–320 kbps (off for wav/flac), speed 0.25×–4× (pitch kept, chained `atempo`), volume ±20 dB, mono/stereo/keep. Input: a file or a URL (yt-dlp). Progress from `ffmpeg -progress`. |
+| Audio | mp3, wav, flac, ogg, m4a, opus. Bitrate 64–320 kbps (off for wav/flac), speed 0.25×–4× in two modes: *Pertahankan pitch* (default, chained `atempo`) or *Ikut pitch* (resampling, `asetrate`+`aresample`, so speed and pitch change together like Roblox's `Sound.PlaybackSpeed`; to undo it in Roblox set `PlaybackSpeed` to 1/speed; the pitch behaviour of PlaybackSpeed is not stated in the Roblox docs, unverified there),  volume ±20 dB, mono/stereo/keep. Input: a file or a URL (yt-dlp). Progress from `ffmpeg -progress`. |
 | Video ke Gambar | PNG or JPG frames (JPG quality 1–100), 0.5–60 fps or every frame, into a new folder (never overwrites). Cancel removes the partial folder. |
 | Unduh Video | One video via yt-dlp: best/1080/720/480/360, mp4 or as-is, saved to Downloads under its title. |
 | Aset Roblox | Anonymous check and download of a Roblox asset, or a pasted list. See below. |

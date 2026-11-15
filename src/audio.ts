@@ -20,6 +20,7 @@ export function initAudio() {
   const bitrate = $<HTMLSelectElement>("#bitrate", tab);
   const rowBitrate = $("#row-bitrate", tab);
   const channels = $("#channels", tab);
+  const speedMode = $("#speed-mode", tab);
   const speed = $<HTMLInputElement>("#speed", tab);
   const gain = $<HTMLInputElement>("#gain", tab);
   const reset = $<HTMLButtonElement>("#reset", tab);
@@ -54,7 +55,8 @@ export function initAudio() {
     bitrate.disabled = busy || lossless;
     for (const el of [pick, urlInput, format, speed, gain, reset]) el.disabled = busy;
     setSegDisabled(channels, busy);
-    reset.hidden = Number(speed.value) === 1 && Number(gain.value) === 0;
+    setSegDisabled(speedMode, busy);
+    reset.hidden = Number(speed.value) === 1 && Number(gain.value) === 0 && segValue(speedMode) === "tempo";
     fetchBtn.disabled = busy || !urlOk;
     save.disabled = busy || !input;
     convert.disabled = busy || !input || !output;
@@ -151,13 +153,14 @@ export function initAudio() {
     stale();
   });
   segmented(channels, stale);
+  segmented(speedMode, () => void syncValues());
   bitrate.addEventListener("change", stale);
 
   const syncValues = async () => {
     const v = Number(speed.value);
     $("#speed-val", tab).textContent = fmtSpeed(v);
     $("#gain-val", tab).textContent = fmtDb(Number(gain.value));
-    $("#speed-hint", tab).textContent = await Rokit.hint(v); // the same rule the tests cover
+    $("#speed-hint", tab).textContent = await Rokit.hint(v, segValue(speedMode)); // the same rule the tests cover
     render();
     stale();
   };
@@ -166,6 +169,7 @@ export function initAudio() {
   reset.addEventListener("click", () => {
     speed.value = "1";
     gain.value = "0";
+    for (const b of speedMode.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === "tempo");
     void syncValues();
   });
 
@@ -185,16 +189,19 @@ export function initAudio() {
         speed: Number(speed.value),
         gainDb: Number(gain.value),
         channels: segValue(channels),
+        speedMode: segValue(speedMode),
       };
       const wasDownload = await Rokit.isDownload(input);
+      let note = "";
       const progress = new Channel<ConvProgress>((p) => {
+        if (p.note) note = p.note;
         fillWave(p.percent);
         setProgress(status, p.percent, "Mengonversi…", `${Math.round(p.percent)}%`);
       });
       setProgress(status, 0, "Mengonversi…", "0%");
       await Rokit.convert(input, output, opts, progress);
       fillWave(100);
-      setStatus(status, "ok", `Selesai — tersimpan di ${output}`);
+      setStatus(status, "ok", `Selesai — tersimpan di ${output}${note ? ` (${note})` : ""}`);
       if (wasDownload) input = ""; // the backend deleted the temp download
     }),
   );

@@ -116,7 +116,7 @@ func (r *Rokit) SuggestOutput(input, format string) string {
 func (r *Rokit) IsDownload(path string) bool { return r.isTemp(path) }
 
 // Hint is the speed-inverse hint text.
-func (r *Rokit) Hint(speed float64) string { return SpeedHint(speed) }
+func (r *Rokit) Hint(speed float64, mode string) string { return SpeedHint(speed, mode) }
 
 // IsURL lets the page validate with the same rule the backend enforces.
 func (r *Rokit) IsURL(s string) bool { return ValidURL(s) }
@@ -218,8 +218,15 @@ func (r *Rokit) Convert(ctx context.Context, input, output string, o Opts, progr
 	}
 	// The output lasts duration / speed; that is what 100% means.
 	total := 0.0
-	if info, err := probeFile(cctx, input); err == nil && info.Duration > 0 {
+	info, probeErr := probeFile(cctx, input)
+	if probeErr == nil && info.Duration > 0 {
 		total = info.Duration / o.Speed
+	}
+	if probeErr == nil {
+		o.SampleRate = info.SampleRate
+	}
+	if o.SpeedMode == modePitch && o.SampleRate == 0 && progress != nil {
+		_ = progress.Send(ConvProgress{Note: "Sample rate file tidak terbaca; dipakai 44100 Hz sebagai dasar."})
 	}
 	args := append([]string{"-progress", "pipe:1", "-nostats"}, BuildArgs(input, output, o)...)
 	cmd := toolCmd(cctx, "ffmpeg", args...)

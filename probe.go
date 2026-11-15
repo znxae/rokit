@@ -17,6 +17,8 @@ type VideoInfo struct {
 	Height   int     `json:"height"`
 	HasVideo bool    `json:"hasVideo"`
 	HasAudio bool    `json:"hasAudio"`
+	// SampleRate of the first audio stream in Hz; 0 if unknown.
+	SampleRate int `json:"sampleRate"`
 }
 
 const noAudioMsg = "Video ini tidak punya audio"
@@ -47,6 +49,7 @@ func ParseProbe(b []byte) (VideoInfo, error) {
 			R    string `json:"r_frame_rate"`
 			W    int    `json:"width"`
 			H    int    `json:"height"`
+			SR   string `json:"sample_rate"`
 		} `json:"streams"`
 		Format struct {
 			Duration string `json:"duration"`
@@ -60,6 +63,9 @@ func ParseProbe(b []byte) (VideoInfo, error) {
 	for _, s := range raw.Streams {
 		switch s.Type {
 		case "audio":
+			if !v.HasAudio {
+				v.SampleRate, _ = strconv.Atoi(s.SR)
+			}
 			v.HasAudio = true
 		case "video":
 			if v.HasVideo {
@@ -83,7 +89,7 @@ func NoAudioStderr(stderr string) bool {
 
 func probeFile(ctx context.Context, path string) (VideoInfo, error) {
 	cmd := toolCmd(ctx, "ffprobe", "-v", "error",
-		"-show_entries", "stream=codec_type,avg_frame_rate,r_frame_rate,width,height:format=duration",
+		"-show_entries", "stream=codec_type,avg_frame_rate,r_frame_rate,width,height,sample_rate:format=duration",
 		"-of", "json", path)
 	hideWindow(cmd)
 	out, err := cmd.Output()

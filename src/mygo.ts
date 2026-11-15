@@ -53,6 +53,8 @@ export interface ClothingFile {
 
 /** ConvProgress is streamed while an audio conversion runs. */
 export interface ConvProgress {
+  /** a one-off remark for the user, e.g. a fallback that was used */
+  note?: string;
   /** 0..100 */
   percent: number;
 }
@@ -123,6 +125,11 @@ export interface Opts {
   gainDb: number;
   /** keep | mono | stereo */
   channels: string;
+  /**
+   * SpeedMode: "" or "tempo" keeps the pitch (atempo); "pitch" resamples, so speed and pitch change together
+   * (what Roblox's Sound.PlaybackSpeed does).
+   */
+  speedMode: string;
 }
 
 /** RobloxAccount is who is logged in (LoggedIn false when nobody). */
@@ -186,6 +193,8 @@ export interface VideoInfo {
   height: number;
   hasVideo: boolean;
   hasAudio: boolean;
+  /** SampleRate of the first audio stream in Hz; 0 if unknown. */
+  sampleRate: number;
 }
 
 /** VideoMeta is what "Cek" shows. */
@@ -237,8 +246,8 @@ export const Rokit = {
     return call("Rokit.ExtractFrames", input, outDir, o, progress);
   },
   /** Hint is the speed-inverse hint text. */
-  hint(speed: number): Promise<string> {
-    return call("Rokit.Hint", speed);
+  hint(speed: number, mode: string): Promise<string> {
+    return call("Rokit.Hint", speed, mode);
   },
   /** Info fetches title, duration and thumbnail of one video ("Cek"). */
   info(url: string): Promise<VideoMeta> {

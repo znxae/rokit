@@ -128,5 +128,6 @@ var errNoFrames = errors.New("tidak ada frame yang dihasilkan (video tanpa gamba
 
 // ConvProgress is streamed while an audio conversion runs.
 type ConvProgress struct {
-	Percent float64 `json:"percent"` // 0..100
+	Note    string  `json:"note,omitempty"` // a one-off remark for the user, e.g. a fallback that was used
+	Percent float64 `json:"percent"`        // 0..100
 }
