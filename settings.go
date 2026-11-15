@@ -21,6 +21,8 @@ type settings struct {
 	Theme string `json:"theme"`
 	// LoginNoticeSeen: the one-time Roblox login explanation was accepted. Not a secret.
 	LoginNoticeSeen bool `json:"loginNoticeSeen,omitempty"`
+	// SpeedMode is the last chosen audio speed mode: "tempo" (Normal, default) or "pitch" (Roblox).
+	SpeedMode string `json:"speedMode,omitempty"`
 }
 
 // settingsPath is a variable so tests can point it at a temp dir.
@@ -33,7 +35,7 @@ var settingsPath = func() (string, error) {
 }
 
 func loadSettings() settings {
-	s := settings{Theme: "auto"}
+	s := settings{Theme: "auto", SpeedMode: modeTempo}
 	p, err := settingsPath()
 	if err != nil {
 		return s
@@ -47,6 +49,9 @@ func loadSettings() settings {
 		s.Theme = got.Theme
 	}
 	s.LoginNoticeSeen = got.LoginNoticeSeen
+	if got.SpeedMode == modePitch {
+		s.SpeedMode = modePitch
+	}
 	return s // a missing or corrupt file just means the default
 }
 
@@ -79,5 +84,18 @@ func (r *Rokit) SetTheme(name string) error {
 	}
 	s := loadSettings()
 	s.Theme = name
+	return saveSettings(s)
+}
+
+// SpeedMode returns the saved audio speed mode ("tempo" by default).
+func (r *Rokit) SpeedMode() string { return loadSettings().SpeedMode }
+
+// SetSpeedMode saves the audio speed mode; unknown values are rejected.
+func (r *Rokit) SetSpeedMode(mode string) error {
+	if mode != modeTempo && mode != modePitch {
+		return fmt.Errorf("mode kecepatan %q tidak dikenal", mode)
+	}
+	s := loadSettings()
+	s.SpeedMode = mode
 	return saveSettings(s)
 }

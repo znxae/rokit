@@ -98,19 +98,19 @@ func TestChannels(t *testing.T) {
 }
 
 func TestSpeedHint(t *testing.T) {
-	const tempo15 = "Pitch tetap. Roblox PlaybackSpeed mengubah pitch, jadi jangan pakai mode ini kalau Anda akan memperlambat di Roblox. Di alat lain yang menjaga pitch: ubah speed ke 0.667x (lebih lambat)"
+	const normal = "Nada tetap, hanya kecepatan yang berubah."
 	for _, k := range []struct {
 		speed      float64
 		mode, want string
 	}{
 		{1, "tempo", "Speed normal (1x)"},
 		{1, "pitch", "Speed normal (1x)"},
-		{1.5, "tempo", tempo15},
-		{1.5, "", tempo15},
-		{0.5, "tempo", "Pitch tetap. Roblox PlaybackSpeed mengubah pitch, jadi jangan pakai mode ini kalau Anda akan memperlambat di Roblox. Di alat lain yang menjaga pitch: ubah speed ke 2.000x (lebih cepat)"},
-		{2, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 0.500 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
-		{4, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 0.250 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
-		{0.25, "pitch", "Di Roblox Studio, setel PlaybackSpeed ke 4.000 untuk kembali ke suara asli (pitch dan kecepatan kembali normal)"},
+		{1.5, "tempo", normal},
+		{1.5, "", normal},
+		{0.5, "tempo", normal},
+		{2, "pitch", "Untuk kembali ke suara asli di Roblox Studio, setel PlaybackSpeed ke 0.500 (lebih lambat)."},
+		{4, "pitch", "Untuk kembali ke suara asli di Roblox Studio, setel PlaybackSpeed ke 0.250 (lebih lambat)."},
+		{0.25, "pitch", "Untuk kembali ke suara asli di Roblox Studio, setel PlaybackSpeed ke 4.000 (lebih cepat)."},
 	} {
 		if got := SpeedHint(k.speed, k.mode); got != k.want {
 			t.Errorf("%v %s: got %q", k.speed, k.mode, got)

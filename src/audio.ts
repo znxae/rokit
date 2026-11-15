@@ -153,7 +153,14 @@ export function initAudio() {
     stale();
   });
   segmented(channels, stale);
-  segmented(speedMode, () => void syncValues());
+  segmented(speedMode, (v) => {
+    void Rokit.setSpeedMode(v).catch(() => {}); // the choice already changed on screen
+    void syncValues();
+  });
+  void Rokit.speedMode().then((m) => {
+    for (const b of speedMode.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === m);
+    void syncValues();
+  });
   bitrate.addEventListener("change", stale);
 
   const syncValues = async () => {
@@ -170,6 +177,7 @@ export function initAudio() {
     speed.value = "1";
     gain.value = "0";
     for (const b of speedMode.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === "tempo");
+    void Rokit.setSpeedMode("tempo").catch(() => {});
     void syncValues();
   });
 

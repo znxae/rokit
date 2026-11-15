@@ -69,3 +69,26 @@ func TestEveryThemeHasBackground(t *testing.T) {
 		}
 	}
 }
+
+func TestSpeedModePersistsWithTheme(t *testing.T) {
+	tempSettings(t)
+	r := &Rokit{}
+	if r.SpeedMode() != "tempo" {
+		t.Fatal("default must be tempo (Normal)")
+	}
+	if err := r.SetTheme("oled"); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.SetSpeedMode("pitch"); err != nil {
+		t.Fatal(err)
+	}
+	if r.SpeedMode() != "pitch" || r.Theme() != "oled" {
+		t.Fatalf("mode %s theme %s", r.SpeedMode(), r.Theme())
+	}
+	if err := r.SetTheme("dark"); err != nil || r.SpeedMode() != "pitch" {
+		t.Fatal("changing the theme must keep the speed mode")
+	}
+	if r.SetSpeedMode("x") == nil || r.SpeedMode() != "pitch" {
+		t.Fatal("unknown mode must be rejected and change nothing")
+	}
+}

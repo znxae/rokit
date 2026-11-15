@@ -347,9 +347,17 @@ export const Rokit = {
   saveClothingImage(kind: string, dataB64: string): Promise<string> {
     return call("Rokit.SaveClothingImage", kind, dataB64);
   },
+  /** SetSpeedMode saves the audio speed mode; unknown values are rejected. */
+  setSpeedMode(mode: string): Promise<void> {
+    return call("Rokit.SetSpeedMode", mode);
+  },
   /** SetTheme saves the theme; unknown names are rejected. */
   setTheme(name: string): Promise<void> {
     return call("Rokit.SetTheme", name);
+  },
+  /** SpeedMode returns the saved audio speed mode ("tempo" by default). */
+  speedMode(): Promise<string> {
+    return call("Rokit.SpeedMode");
   },
   /** SuggestFramesDir is <parent>/<video name> (parent "" = Downloads), made unique so nothing is overwritten. */
   suggestFramesDir(input: string, parent: string): Promise<string> {

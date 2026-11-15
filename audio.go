@@ -121,20 +121,20 @@ func (o Opts) Validate() error {
 	return nil
 }
 
-// SpeedHint explains, per mode, how to get the original sound back. mode is "pitch" or anything else (keep pitch).
+// SpeedHint explains the chosen mode. mode is "pitch" (Roblox) or anything else (Normal, pitch kept).
 func SpeedHint(speed float64, mode string) string {
 	if math.Abs(speed-1) < 5e-4 {
 		return "Speed normal (1x)"
 	}
-	inv := 1 / speed
-	if mode == modePitch {
-		return fmt.Sprintf("Di Roblox Studio, setel PlaybackSpeed ke %.3f untuk kembali ke suara asli (pitch dan kecepatan kembali normal)", inv)
+	if mode != modePitch {
+		return "Nada tetap, hanya kecepatan yang berubah."
 	}
+	inv := 1 / speed
 	dir := "lebih lambat"
 	if inv > 1 {
 		dir = "lebih cepat"
 	}
-	return fmt.Sprintf("Pitch tetap. Roblox PlaybackSpeed mengubah pitch, jadi jangan pakai mode ini kalau Anda akan memperlambat di Roblox. Di alat lain yang menjaga pitch: ubah speed ke %.3fx (%s)", inv, dir)
+	return fmt.Sprintf("Untuk kembali ke suara asli di Roblox Studio, setel PlaybackSpeed ke %.3f (%s).", inv, dir)
 }
 
 // ValidURL accepts only plain http(s) URLs without whitespace/control chars.
